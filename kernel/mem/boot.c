@@ -33,13 +33,11 @@ void *boot_alloc(uint32_t n)
 		next_free = ROUNDUP((char *)end, PAGE_SIZE);
 	}
 
-	/* Allocate a chunk large enough to hold 'n' bytes, then update
-	 * next_free. Make sure next_free is kept aligned to a multiple of
-	 * PAGE_SIZE.
-	 *
-	 * LAB 1: your code here.
-	 */
-	return NULL;
+	result = next_free;
+	assert (PADDR(next_free) + n <= BOOT_MAP_LIM);
+	next_free = ROUNDUP(next_free + n, PAGE_SIZE);
+
+	return result;
 }
 
 /* The addresses and lengths in the memory map provided by the boot loader may

@@ -52,7 +52,7 @@ void mem_init(struct boot_info *boot_info)
 	npages = MIN(BOOT_MAP_LIM, highest_addr) / PAGE_SIZE;
 
 	/* Remove this line when you're ready to test this function. */
-	panic("mem_init: This function is not finished\n");
+	// panic("mem_init: This function is not finished\n");
 
 	/*
 	 * Allocate an array of npages 'struct page_info's and store it in 'pages'.
@@ -95,6 +95,12 @@ void page_init(struct boot_info *boot_info)
 	 *  5) mark the page unavailable - we will later make relevant ones available
 	 */
 	for (i = 0; i < npages; ++i) {
+		page = pages + i;
+		list_init(&page->pp_node);
+		page->pp_ref = 0;
+		page->pp_free = 0;
+		page->pp_order = 0;
+		page->pp_avail = 0;
 		/* LAB 1: your code here. */
 	}
 
@@ -104,6 +110,14 @@ void page_init(struct boot_info *boot_info)
 	 * Hint: these pages are in the range [pages, pages + (npages * sizeof *pages))
 	 */
 	
+	 for (i = 0; i < npages; ++i) {
+		page = pages + i;
+		page->pp_ref = 1;
+		/// aaah we need buddy first to know how many pages
+	 }
+
+
+
 	/* LAB 1: your code here */
 
 	/* Go through the pages reserved for VGA memory (for use in the console),
@@ -135,4 +149,3 @@ void page_init(struct boot_info *boot_info)
 		/* LAB 1: your code here. */
 	}
 }
-
