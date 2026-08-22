@@ -108,7 +108,7 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 	buddy->pp_free = 1;
 	lhs->pp_order = buddy->pp_order = new_order;
 
-	panic("TODO: add buddy to buddy_free_list new_order");
+	list_add(buddy_free_list + new_order, &buddy->pp_node);
 
 	return buddy_split(lhs, req_order);
 }
@@ -148,14 +148,16 @@ struct page_info *buddy_find(size_t req_order)
 		return NULL;
 	}
 
-	panic("TODO: check budy of req_order is empty");
-	if (false) {
+	if (list_is_empty(buddy_free_list + req_order)) {
 		return buddy_split(buddy_find(req_order + 1), req_order);
 	}
 
-	panic("TODO: get first entry of free budy req_order and del it and return");
+	struct page_info *page = container_of(list_pop(buddy_free_list + req_order), struct page_info, pp_node);
+	assert(page->pp_free);
+	assert(page->pp_order == req_order);
+	page->pp_free = 0;
 
-	return NULL;
+	return page;
 }
 
 /*
