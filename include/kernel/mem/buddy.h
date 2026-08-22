@@ -78,3 +78,6 @@ static inline void *page2kva(struct page_info *pp)
 {
 	return KADDR(page2pa(pp));
 }
+
+#define BUDDY_SIZE(order) (PAGE_SIZE << order)
+#define BUDDY_PA(pa, order) ((pa) & BUDDY_SIZE(order) ? (pa) - BUDDY_SIZE(order) : (pa) + BUDDY_SIZE(order))

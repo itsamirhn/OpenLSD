@@ -91,8 +91,23 @@ size_t count_total_free_pages(void)
  */
 struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 {
-	/* LAB 1: your code here. */
-	return NULL;
+	assert(lhs != NULL);
+	assert(req_order <= lhs->pp_order);
+	if (req_order == lhs->pp_order) {
+		return lhs;
+	}
+
+	assert(lhs->pp_order > 0);
+	size_t new_order = lhs->pp_order - 1;
+	struct page_info *buddy = pa2page(BUDDY_PA(page2pa(lhs), new_order));
+	assert(buddy != NULL);
+	assert(buddy->pp_free == 0);
+	buddy->pp_free = 1;
+	lhs->pp_order = buddy->pp_order = new_order;
+
+	panic("TODO: add buddy to buddy_free_list new_order");
+
+	return buddy_split(lhs, req_order);
 }
 
 /* Merges the buddy of the page with the page if the buddy is free to form
