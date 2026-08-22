@@ -164,7 +164,13 @@ struct page_info *page_alloc(int alloc_flags)
  */
 void page_free(struct page_info *pp)
 {
-	/* LAB 1: your code here. */
+	assert(pp->pp_ref == 0);
+
+	// Maybe BONUS (double free panic)
+	assert(pp->pp_free == 0);
+	pp->pp_free = 1;
+
+	buddy_merge(pp);
 }
 
 /*
