@@ -91,7 +91,10 @@ size_t count_total_free_pages(void)
  */
 struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 {
-	assert(lhs != NULL);
+	if (lhs == NULL) {
+		return NULL;
+	}
+
 	assert(req_order <= lhs->pp_order);
 	if (req_order == lhs->pp_order) {
 		return lhs;
@@ -141,7 +144,17 @@ struct page_info *buddy_merge(struct page_info *page)
  */
 struct page_info *buddy_find(size_t req_order)
 {
-	/* LAB 1: your code here. */
+	if (req_order >= BUDDY_MAX_ORDER) {
+		return NULL;
+	}
+
+	panic("TODO: check budy of req_order is empty");
+	if (false) {
+		return buddy_split(buddy_find(req_order + 1), req_order);
+	}
+
+	panic("TODO: get first entry of free budy req_order and del it and return");
+
 	return NULL;
 }
 
