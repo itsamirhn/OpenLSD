@@ -101,7 +101,6 @@ void page_init(struct boot_info *boot_info)
 		page->pp_free = 0;
 		page->pp_order = 0;
 		page->pp_avail = 0;
-		/* LAB 1: your code here. */
 	}
 
 	/* Go through the pages reserved for use by the buddy allocator itself,
@@ -109,16 +108,12 @@ void page_init(struct boot_info *boot_info)
 	 * in use by setting pp_ref to one.
 	 * Hint: these pages are in the range [pages, pages + (npages * sizeof *pages))
 	 */
-	
-	 for (i = 0; i < npages; ++i) {
-		page = pages + i;
-		page->pp_ref = 1;
-		/// aaah we need buddy first to know how many pages
+
+	 pa = PADDR(pages);
+	 end = pa + (npages * sizeof *pages);
+	 for (; pa < end; i++, pa += PAGE_SIZE) {
+		 pa2page(pa)->pp_ref = 1;
 	 }
-
-
-
-	/* LAB 1: your code here */
 
 	/* Go through the pages reserved for VGA memory (for use in the console),
 	 * and mark all of them to be available.
