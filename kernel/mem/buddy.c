@@ -131,8 +131,30 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
  */
 struct page_info *buddy_merge(struct page_info *page)
 {
-	/* LAB 1: your code here. */
-	return NULL;
+	assert(page->pp_free == 1);
+	if (page->pp_order >= BUDDY_MAX_ORDER - 1) {
+		return page;
+	}
+
+	struct page_info *buddy = pa2page(BUDDY_PA(page2pa(page), page->pp_order));
+	assert(buddy != NULL);
+	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order) {
+		return page;
+	}
+	assert(buddy->pp_order == page->pp_order);
+	assert(buddy->pp_free == 1);
+
+	list_del(&buddy->pp_node);
+
+	if (page2pa(page) < page2pa(buddy)) {
+		page->pp_order++;
+		buddy->pp_free = 0;
+		return buddy_merge(page);
+	} else {
+		buddy->pp_order++;
+		page->pp_free = 0;
+		return buddy_merge(buddy);
+	}
 }
 
 /* Given the order req_order, attempts to find a page of that order or a larger
