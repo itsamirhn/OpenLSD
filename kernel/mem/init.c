@@ -159,7 +159,7 @@ void page_init(struct boot_info *boot_info)
 			if(pa == ROUNDDOWN(PADDR(boot_info), PAGE_SIZE)) {
 				continue;
 			}
-			if((void *) pa == boot_info->elf_hdr, PAGE_SIZE) {
+			if((void *)pa == boot_info->elf_hdr) {
 				continue;
 			}
 			if(pa >= KERNEL_LMA && pa < end) {
