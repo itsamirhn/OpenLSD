@@ -108,7 +108,8 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 	buddy->pp_free = 1;
 	lhs->pp_order = buddy->pp_order = new_order;
 
-	list_add(buddy_free_list + new_order, &buddy->pp_node);
+	list_init(&buddy->pp_node);
+	list_add_tail(buddy_free_list + new_order, &buddy->pp_node);
 
 	return buddy_split(lhs, req_order);
 }
@@ -133,6 +134,7 @@ struct page_info *buddy_merge(struct page_info *page)
 {
 	assert(page->pp_free == 1);
 	if (page->pp_order >= BUDDY_MAX_ORDER - 1) {
+		list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return page;
 	}
 
@@ -149,10 +151,14 @@ struct page_info *buddy_merge(struct page_info *page)
 	if (page2pa(page) < page2pa(buddy)) {
 		page->pp_order++;
 		buddy->pp_free = 0;
+		list_init(&page->pp_node);
+		// list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return buddy_merge(page);
 	} else {
 		buddy->pp_order++;
 		page->pp_free = 0;
+		list_init(&buddy->pp_node);
+		// list_add_tail(buddy_free_list + buddy->pp_order, &buddy->pp_node);
 		return buddy_merge(buddy);
 	}
 }
@@ -207,8 +213,8 @@ struct page_info *page_alloc(int alloc_flags)
 
 	struct page_info *page = buddy_find(order);
 
-	if	(page != NULL&& (alloc_flags & ALLOC_ZERO)) {
-			memset(page2kva(page), 0, BUDDY_SIZE(order));
+	if	(page != NULL && (alloc_flags & ALLOC_ZERO)) {
+		memset(page2kva(page), 0, BUDDY_SIZE(order));
 	}
 	
 	return page;
