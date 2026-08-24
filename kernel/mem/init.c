@@ -141,6 +141,36 @@ void page_init(struct boot_info *boot_info)
 	end = PADDR(boot_alloc(0));
 
 	for (i = 0; i < boot_info->mmap_len; ++i, ++entry) {
-		/* LAB 1: your code here. */
+		if(entry->type != MMAP_FREE) {
+			continue;
+		}
+
+		for(pa = entry->addr; pa < entry->addr + entry->len; pa += PAGE_SIZE) {
+			if(pa >= BOOT_MAP_LIM) {
+				continue;
+			}
+			page = pa2page(pa);
+			page->pp_avail = 1;
+
+			// check reserved
+			if(pa == 0) {
+				continue;
+			}
+			if(pa == ROUNDDOWN(PADDR(boot_info), PAGE_SIZE)) {
+				continue;
+			}
+			if((void *) pa == boot_info->elf_hdr, PAGE_SIZE) {
+				continue;
+			}
+			if(pa >= KERNEL_LMA && pa < end) {
+				continue;
+			}
+
+			if(page->pp_ref > 0) {
+				continue;
+			}
+
+			page_free(page);
+		}
 	}
 }

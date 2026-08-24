@@ -199,8 +199,19 @@ struct page_info *buddy_find(size_t req_order)
  */
 struct page_info *page_alloc(int alloc_flags)
 {
-	/* LAB 1: your code here. */
-	return NULL;
+	int order = BUDDY_4K_PAGE;
+	
+	if (alloc_flags & ALLOC_HUGE) {
+		order = BUDDY_2M_PAGE;
+	}
+
+	struct page_info *page = buddy_find(order);
+
+	if	(page != NULL&& (alloc_flags & ALLOC_ZERO)) {
+			memset(page2kva(page), 0, BUDDY_SIZE(order));
+	}
+	
+	return page;
 }
 
 /*
@@ -237,4 +248,3 @@ void page_decref(struct page_info *pp)
 		page_free(pp);
 	}
 }
-
