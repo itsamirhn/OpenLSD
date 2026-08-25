@@ -108,7 +108,6 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 	buddy->pp_free = 1;
 	lhs->pp_order = buddy->pp_order = new_order;
 
-	list_init(&buddy->pp_node);
 	list_add_tail(buddy_free_list + new_order, &buddy->pp_node);
 
 	return buddy_split(lhs, req_order);
@@ -141,6 +140,7 @@ struct page_info *buddy_merge(struct page_info *page)
 	struct page_info *buddy = pa2page(BUDDY_PA(page2pa(page), page->pp_order));
 	assert(buddy != NULL);
 	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order) {
+		list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return page;
 	}
 	assert(buddy->pp_order == page->pp_order);
@@ -151,14 +151,10 @@ struct page_info *buddy_merge(struct page_info *page)
 	if (page2pa(page) < page2pa(buddy)) {
 		page->pp_order++;
 		buddy->pp_free = 0;
-		list_init(&page->pp_node);
-		// list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return buddy_merge(page);
 	} else {
 		buddy->pp_order++;
 		page->pp_free = 0;
-		list_init(&buddy->pp_node);
-		// list_add_tail(buddy_free_list + buddy->pp_order, &buddy->pp_node);
 		return buddy_merge(buddy);
 	}
 }
