@@ -1,0 +1,5 @@
+name: Boot Allocator - Check Usage
+description: Tests whether the kernel properly calls the boot_alloc() method
+points: 0.1
+
+required: true

@@ -1,0 +1,7 @@
+name: Buddy Allocator - Alignment Check
+description: Verifies that pages of all orders are physically aligned to their size.
+points: 0.5
+
+regexlines:
+  - '\[TEST\] Verifying physical alignment for orders 0-[0-9]+'
+  - '\[TEST\] Alignment checks passed\.'
