@@ -27,6 +27,7 @@ struct page_table *kernel_pml4;
 int pml4_setup(struct boot_info *boot_info)
 {
 	struct page_info *page;
+	int i;
 
 	/* Allocate the kernel PML4. */
 	page = page_alloc(ALLOC_ZERO);
@@ -38,27 +39,33 @@ int pml4_setup(struct boot_info *boot_info)
 	kernel_pml4 = page2kva(page);
 
 	/* Map in all regions available to us according to the boot_info */
+
+	boot_map_mmap(kernel_pml4, boot_info);
 	
-	/* LAB 2: your code here */
 
 	/* Correct page permissions according to the kernel ELF header, as
 	 * passed to us by boot_info
 	 */
 
-	/* LAB 2: your code here. */
+
+	boot_map_elf(kernel_pml4, KADDR((physaddr_t)boot_info->elf_hdr));
+
 
 	/* Use the physical memory that 'bootstack' refers to as the kernel
 	 * stack. The kernel stack grows down from virtual address KSTACK_TOP.
 	 * Map 'bootstack' to [KSTACK_TOP - KSTACK_SIZE, KSTACK_TOP).
 	 */
 
-	/* LAB 2: your code here. */
+	boot_map_region(kernel_pml4, (void *) KSTACK_TOP - KSTACK_SIZE, KSTACK_SIZE,
+	 	PADDR((void *)KSTACK_TOP - KSTACK_SIZE), PAGE_PRESENT | PAGE_WRITE);
 
 	 
 	/* Map in the metadata pages from the buddy allocator as RW-. */
-	
-	/* LAB 2: your code here. */
-	
+
+
+	boot_map_region(kernel_pml4, (void *) KPAGES, npages * sizeof(struct page_info),
+		KPAGES, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC );
+
 
 	/* Map in the video memory; range [IO_PHYS_MEM, EXT_PHYS_MEM) as RW- */
 	boot_map_region(kernel_pml4, (void *)(KERNEL_VMA + IO_PHYS_MEM), EXT_PHYS_MEM - IO_PHYS_MEM,
@@ -68,7 +75,7 @@ int pml4_setup(struct boot_info *boot_info)
 	 * buddy_migrate().
 	 */
 
-	/* LAB 2: your code here. */
+	 buddy_migrate();
 
 
 	return 0;
@@ -248,7 +255,7 @@ void page_init(struct boot_info *boot_info)
 			if(pa == ROUNDDOWN(PADDR(boot_info), PAGE_SIZE)) {
 				continue;
 			}
-			if((void *)pa == boot_info->elf_hdr) {
+			if(pa == (physaddr_t) boot_info->elf_hdr) {
 				continue;
 			}
 			if(pa >= KERNEL_LMA && pa < end) {
