@@ -91,7 +91,20 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 	struct mmap_entry *entry;
 	uint64_t flags;
 
-	/* LAB 2: your code here */
+	entry = (struct mmap_entry *)KADDR(boot_info->mmap_addr);
+
+	for (i = 0; i < boot_info->mmap_len; ++i, ++entry) {
+		switch (entry->type) {
+			case MMAP_FREE:
+				flags = PAGE_PRESENT | PAGE_WRITE;
+				break;
+			default:
+				flags = PAGE_PRESENT;
+				break;
+		}
+		boot_map_region(pml4, (void *)(KERNEL_VMA + entry->addr), entry->len, entry->addr, flags);
+	}
+
 }
 
 /* This function parses the program headers of the ELF header of the kernel
@@ -110,6 +123,27 @@ void boot_map_elf(struct page_table *pml4, struct elf *elf_hdr)
 	    (struct elf_proghdr *)((char *)elf_hdr + elf_hdr->e_phoff);
 	uint64_t flags;
 	size_t i;
+
+	for (i = 0; i < elf_hdr->e_phnum; ++i, ++prog_hdr) {
+		if (prog_hdr->p_type != ELF_PROG_LOAD) {
+			continue;
+		}
+
+		if (prog_hdr->p_va < KERNEL_VMA) {
+			continue;
+		}
+
+		flags = PAGE_PRESENT;
+		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) {
+			flags |= PAGE_WRITE;
+		}
+		if (!(prog_hdr->p_flags & ELF_PROG_FLAG_EXEC)) {
+			flags |= PAGE_NO_EXEC;
+		}
+
+		boot_map_region(pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz,
+		    prog_hdr->p_pa, flags);
+	}
 
 	/* LAB 2: your code here. */
 }
