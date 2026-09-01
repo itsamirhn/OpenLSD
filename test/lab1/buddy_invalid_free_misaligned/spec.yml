@@ -1,0 +1,9 @@
+name: Buddy Allocator - Invalid Free of a Misaligned Pointer
+description: Frees a pointer that is not a page_info at all, which should panic
+bonus: INVALID_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Freeing a misaligned page_info pointer; this should panic'
+
+should_panic: true

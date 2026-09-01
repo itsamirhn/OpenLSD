@@ -229,6 +229,16 @@ struct page_info *page_alloc(int alloc_flags)
  */
 void page_free(struct page_info *pp)
 {
+	#ifdef BONUS_INVALID_FREE
+		if (!(pages <= pp && pp < pages + npages)) {
+				panic("Invalid free detected; %p is outside the pages array", pp);
+		}
+
+		if (((void *)pp - (void *)pages) % sizeof *pages) {
+				panic("Invalid free detected; %p is not page_info-aligned", pp);
+		}
+	#endif
+
 	assert(pp->pp_ref == 0);
 
 	#ifdef BONUS_DOUBLE_FREE

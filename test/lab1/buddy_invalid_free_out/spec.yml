@@ -1,0 +1,9 @@
+name: Buddy Allocator - Invalid Free of a Pointer outside the Pages Array
+description: Frees a pointer that is outside the pages array, which should panic
+bonus: INVALID_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Freeing a pointer outside the pages array; this should panic'
+
+should_panic: true
