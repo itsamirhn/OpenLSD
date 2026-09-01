@@ -18,7 +18,7 @@ LAB=1
 # "make test-all" or when submitting to Themis. Each of the bonus
 # features will be tested separately, in isolation, to prevent
 # interference between bonus features.
-#BONUSES = FOO BAR FOOBAR
+BONUSES = DOUBLE_FREE
 
 # The following setup can be used to specify custom configuration
 # settings for specific bonus features. For example, for the SMEP/

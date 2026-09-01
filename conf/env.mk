@@ -44,7 +44,7 @@ TEST_DUMP = 0
 # your codebase.
 #
 # This property is case-sensitive! Make sure to capitalize all items.
-#BONUS = FOO BAR
+BONUS = DOUBLE_FREE
 
 # This setting sets the number of cores available to OpenLSD. When
 # not provided, the default is 1. Changing this is only relevant

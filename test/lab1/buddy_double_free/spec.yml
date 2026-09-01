@@ -1,0 +1,9 @@
+name: Buddy Allocator - Double Free
+description: Frees the same page twice, which should be detected and panic
+bonus: DOUBLE_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Freeing the same page twice, this should panic'
+
+should_panic: true
