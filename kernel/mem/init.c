@@ -99,7 +99,11 @@ void page_init(struct boot_info *boot_info)
 		list_init(&page->pp_node);
 		page->pp_ref = 0;
 		page->pp_free = 0;
-		page->pp_order = 0;
+		#ifdef BONUS_INVALID_FREE
+			page->pp_order = BUDDY_MAX_ORDER;
+		#else
+			page->pp_order = 0;
+		#endif
 		page->pp_avail = 0;
 	}
 
@@ -170,6 +174,9 @@ void page_init(struct boot_info *boot_info)
 				continue;
 			}
 
+			#ifdef BONUS_INVALID_FREE
+				page->pp_order = 0;
+			#endif
 			page_free(page);
 		}
 	}

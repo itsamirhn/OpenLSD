@@ -132,7 +132,8 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 struct page_info *buddy_merge(struct page_info *page)
 {
 	assert(page->pp_free == 1);
-	if (page->pp_order >= BUDDY_MAX_ORDER - 1) {
+	assert(page->pp_order < BUDDY_MAX_ORDER);
+	if (page->pp_order == BUDDY_MAX_ORDER - 1) {
 		list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return page;
 	}
@@ -151,10 +152,16 @@ struct page_info *buddy_merge(struct page_info *page)
 	if (page2pa(page) < page2pa(buddy)) {
 		page->pp_order++;
 		buddy->pp_free = 0;
+		#ifdef BONUS_INVALID_FREE
+			buddy->pp_order = BUDDY_MAX_ORDER;
+		#endif
 		return buddy_merge(page);
 	} else {
 		buddy->pp_order++;
 		page->pp_free = 0;
+		#ifdef BONUS_INVALID_FREE
+			page->pp_order = BUDDY_MAX_ORDER;
+		#endif
 		return buddy_merge(buddy);
 	}
 }
@@ -236,6 +243,10 @@ void page_free(struct page_info *pp)
 
 		if (((void *)pp - (void *)pages) % sizeof *pages) {
 				panic("Invalid free detected; %p is not page_info-aligned", pp);
+		}
+		
+		if (pp->pp_order >= BUDDY_MAX_ORDER) {
+				panic("Invalid free detected; %p is not a block header", pp);
 		}
 	#endif
 

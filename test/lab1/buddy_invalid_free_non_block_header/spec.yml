@@ -1,0 +1,9 @@
+name: Buddy Allocator - Invalid Free of a Non-Block Header page
+description: Frees a pointer that is not header of its order block, which should panic.
+bonus: INVALID_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Freeing a pointer that is not a block header; this should panic'
+
+should_panic: true
