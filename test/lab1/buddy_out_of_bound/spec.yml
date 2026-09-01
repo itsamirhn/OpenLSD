@@ -1,0 +1,9 @@
+name: Buddy Allocator - Out-of-Bounds Write
+description: Writes past the end of an allocation into the poisoned buddy
+bonus: OUT_OF_BOUND
+points: 0.5
+
+matchlines:
+  - '[TEST] Accessing memory beyond the allocated page; this should panic'
+
+should_panic: true
