@@ -250,13 +250,13 @@ void page_free(struct page_info *pp)
 		}
 	#endif
 
-	assert(pp->pp_ref == 0);
-
 	#ifdef BONUS_DOUBLE_FREE
 		if (pp->pp_free == 1) {
 			panic("Double free detected for page %p", page2pa(pp));
 		}
 	#endif
+
+	assert(pp->pp_ref == 0);
 	pp->pp_free = 1;
 
 	buddy_merge(pp);

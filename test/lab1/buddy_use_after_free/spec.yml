@@ -1,0 +1,9 @@
+name: Buddy Allocator - Use After Free
+description: Writes to a page after freeing it and reallocating it.
+bonus: USE_AFTER_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Reallocating a use-after-free page; this should panic'
+
+should_panic: true
