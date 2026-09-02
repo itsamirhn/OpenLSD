@@ -1,6 +1,6 @@
 name: Buddy Allocator - Out-of-Bounds Write
 description: Writes past the end of an allocation into the poisoned buddy
-bonus: OUT_OF_BOUND
+bonus: OUT_OF_BOUNDS
 points: 0.5
 
 matchlines:

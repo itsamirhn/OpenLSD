@@ -216,11 +216,13 @@ struct page_info *page_alloc(int alloc_flags)
 
 	struct page_info *page = buddy_find(order);
 	
-	#ifdef BONUS_USE_AFTER_FREE
+	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
 	if(page != NULL){
 		long *va = page2kva(page);
-		if (va[0] != 0 && va[0] != CANARY) {
-			panic("Use after free detected for page %p", page2pa(page));
+		for(int i = 0; i < PAGE_SIZE / sizeof(long); i++) {
+			if (va[i] != 0 && va[i] != CANARY) {
+				panic("Use after free detected for page %p", page2pa(page));
+			}
 		}
 	}
 	#endif
@@ -265,9 +267,11 @@ void page_free(struct page_info *pp)
 		}
 	#endif
 
-	#ifdef BONUS_USE_AFTER_FREE
+	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
 		long *va = page2kva(pp);
-		va[0] = CANARY;
+		for (int i = 0; i < PAGE_SIZE / sizeof(long); i++) {
+			va[i] = CANARY;
+		}
 	#endif
 
 	assert(pp->pp_ref == 0);
