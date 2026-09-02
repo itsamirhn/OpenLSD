@@ -215,6 +215,15 @@ struct page_info *page_alloc(int alloc_flags)
 	}
 
 	struct page_info *page = buddy_find(order);
+	
+	#ifdef BONUS_USE_AFTER_FREE
+	if(page != NULL){
+		long *va = page2kva(page);
+		if (va[0] != 0 && va[0] != CANARY) {
+			panic("Use after free detected for page %p", page2pa(page));
+		}
+	}
+	#endif
 
 	if	(page != NULL && (alloc_flags & ALLOC_ZERO)) {
 		memset(page2kva(page), 0, BUDDY_SIZE(order));
@@ -254,6 +263,11 @@ void page_free(struct page_info *pp)
 		if (pp->pp_free == 1) {
 			panic("Double free detected for page %p", page2pa(pp));
 		}
+	#endif
+
+	#ifdef BONUS_USE_AFTER_FREE
+		long *va = page2kva(pp);
+		va[0] = CANARY;
 	#endif
 
 	assert(pp->pp_ref == 0);
