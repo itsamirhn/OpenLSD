@@ -1,1 +1,24 @@
-Welcome to the OpenLSD framework.
+Description of LAB 1 bonuses:
+
+# DOUBLE FREE
+##### MACRO = BONUS_DOUBLE_FREE
+
+This feature checks whether if something tries to free a free page again and it panics if that is the case. It is implemented in `page_free()` where it checks before hand if 
+`pp->pp_free == 1`, if that is true, then it panics.
+
+
+# USE_AFTER_FREE
+##### MACRO = BONUS_USE_AFTER_FREE
+
+This bonus poisons a page after it has been freed in `page_free()`. And before giving out a page out in `page_alloc()` we check whether it has been written to that page. That means that a to be given out page either contains 0's or the poison. If that is not the case then it panics. The use after free write is detected when that page is being allocated again.
+
+# OUT_OF_BOUNDS
+##### MACRO = BONUS_OUT_OF_BOUNDS
+
+This feature detects out of bounds writes into free pages. When a new page is being allocated, it is being checked if it either full of 0's or with the canary. In the case that is not true, that means that an out of bounds write happened. The canary is written in `page_free()`. Why the check for 0's in the page? That is in the case of an out of bounds write into a fresh page that was never given out.
+Because we only detect afterwards out of bounds writes afterwards, the implementation for this feature is basically the same as the one for use after free.
+
+# INVALID FREE
+#### Macro = BONUS_INVALID_FREE
+
+This features detects invalid frees. It detects if the page is inside of the page array or not. It also checks where the address is paged_info-aligned, to protect against the corruption of the page data structure. And it also detects if a page that is marked as used because it is used in a higher order buddy allocation, but it is not its head. For this check we mark all the tail pages of a buddy block with `BUDDY_MAX_ORDER` and the block order is checked in `page_free()` before free'ing a specific block. It panics in all cases of invalid free.
