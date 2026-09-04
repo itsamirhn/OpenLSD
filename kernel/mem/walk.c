@@ -68,7 +68,7 @@ static uintptr_t pml4_start(uintptr_t addr)
 static int ptbl_walk_range(struct page_table *ptbl, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+
 	return 0;
 }
 
@@ -87,7 +87,30 @@ static int ptbl_walk_range(struct page_table *ptbl, uintptr_t base,
 static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+	uintptr_t i, curr_base, curr_end;
+	physaddr_t entry;
+
+	struct page_table *ptbl;
+
+	for(i = PAGE_DIR_INDEX(base); i <= PAGE_DIR_INDEX(end); ++i){
+		entry = pdir->entries[i];
+		curr_base = MAX(base, i << PAGE_DIR_SHIFT);
+		curr_end = MIN(end, ((i + 1) << PAGE_DIR_SHIFT) - 1);
+		if(walker->pde_callback != NULL){
+			walker->pde_callback(&pdir->entries[i], curr_base, curr_end, walker);
+		}
+		if(PAGE_PRESENT & entry){
+			if(!(PAGE_HUGE & entry)){
+				ptbl = KADDR(PAGE_ADDR(entry));
+				ptbl_walk_range(ptbl, curr_base, curr_end, walker);
+				if(walker->pde_unmap != NULL){
+					walker->pde_unmap(&pdir->entries[i], curr_base, curr_end, walker);
+				}	
+		}
+		}else if(walker->pt_hole_callback != NULL){
+			walker->pt_hole_callback(curr_base, curr_end, walker);
+		}
+	}
 	return 0;
 }
 
@@ -106,7 +129,28 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+	uintptr_t i, curr_base, curr_end;
+	physaddr_t entry;
+
+	struct page_table *pdir;
+
+	for(i = PDPT_INDEX(base); i <= PDPT_INDEX(end); ++i){
+		entry = pdpt->entries[i];
+		curr_base = MAX(base, i << PDPT_SHIFT);
+		curr_end = MIN(end, ((i + 1) << PDPT_SHIFT) - 1);
+		if(walker->pdpte_callback != NULL){
+			walker->pdpte_callback(&pdpt->entries[i], curr_base, curr_end, walker);
+		}
+		if(PAGE_PRESENT & entry){
+			pdir = KADDR(PAGE_ADDR(entry));
+			pdir_walk_range(pdir, curr_base, curr_end, walker);
+			if(walker->pdpte_unmap != NULL){
+				walker->pdpte_unmap(&pdpt->entries[i], curr_base, curr_end, walker);
+			}	
+		}else if(walker->pt_hole_callback != NULL){
+			walker->pt_hole_callback(curr_base, curr_end, walker);
+		}
+	}
 	return 0;
 }
 
@@ -125,7 +169,29 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+	uintptr_t i, curr_base, curr_end;
+	physaddr_t entry;
+
+	struct page_table *pdpt;
+
+	for(i = PML4_INDEX(base); i <= PML4_INDEX(end); ++i){
+		entry = pml4->entries[i];
+		curr_base = MAX(base, i << PML4_SHIFT);
+		curr_end = MIN(end, ((i + 1) << PML4_SHIFT) - 1);
+		if(walker->pml4e_callback != NULL){
+			walker->pml4e_callback(&pml4->entries[i], curr_base, curr_end, walker);
+		}
+		if(PAGE_PRESENT & entry){
+			pdpt = KADDR(PAGE_ADDR(entry));
+
+			pdpt_walk_range(pdpt, curr_base, curr_end, walker);
+			if(walker->pml4e_unmap != NULL){
+				walker->pml4e_unmap(&pml4->entries[i], curr_base, curr_end, walker);
+			}	
+		}else if(walker->pt_hole_callback != NULL){
+			walker->pt_hole_callback(curr_base, curr_end, walker);
+		}
+	}
 	return 0;
 }
 
