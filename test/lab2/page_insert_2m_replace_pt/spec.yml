@@ -1,0 +1,3 @@
+name: Page Insert - 2MB Replace PT
+description: Tests that inserting a 2MB huge page at an address covered by a page table (PT) with multiple 4KB pages correctly replaces the entire PT, frees the PT page and all 4KB pages, and invalidates the TLB for all affected addresses
+points: 0.05

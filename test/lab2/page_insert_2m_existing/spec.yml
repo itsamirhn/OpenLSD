@@ -1,0 +1,3 @@
+name: Page Insert - 2MB Existing
+description: Tests that page_insert correctly handles re-inserting the same 2MB huge page at an existing address and inserting a new 2MB huge page at a different address in the same page directory
+points: 0.05

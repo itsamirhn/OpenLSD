@@ -1,0 +1,5 @@
+name: Page Insert - 4KB Replace
+description: Tests that page_insert correctly replaces an existing 4KB page with a new one, decrements the old page's reference count, invalidates the TLB, and sets up the new page entry
+points: 0.05
+
+required: true

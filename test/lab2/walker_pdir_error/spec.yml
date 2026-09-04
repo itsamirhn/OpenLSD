@@ -1,0 +1,5 @@
+name: Page Walker - Page Directory Level Error Handling
+description: This tests the error handling behaviour of pdir_walk_range when callbacks return errors.
+points: 0.1
+
+required: true

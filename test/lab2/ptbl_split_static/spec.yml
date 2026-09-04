@@ -1,0 +1,5 @@
+name: Page Table Split - Static Memory
+description: Verifies that ptbl_split correctly splits a static huge page (not managed by buddy allocator) into a page table with entries pointing to contiguous regions of the original page, without modifying the static page's reference count or free status.
+points: 0.1
+
+required: true

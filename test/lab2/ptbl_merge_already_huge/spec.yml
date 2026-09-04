@@ -1,0 +1,5 @@
+name: Page Table Merge - Already Huge
+description: Verifies that ptbl_merge does not modify an entry or change page reference counts when the entry already points to a huge page (PAGE_HUGE flag is set).
+points: 0.1
+
+required: true

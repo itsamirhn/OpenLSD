@@ -1,0 +1,5 @@
+name: Page Table Merge - Absent Entry
+description: Verifies that ptbl_merge does not merge entries when not all entries are present, leaving the entry unchanged.
+points: 0.1
+
+required: true

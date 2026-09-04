@@ -1,0 +1,5 @@
+name: Page Insert - Merge THP
+description: Tests that filling the last hole in a page table (PT) containing 511 4KB pages triggers transparent huge page (THP) merging, creating a single 2MB huge page, copying all page data correctly, and freeing the PT and all 4KB pages
+points: 0.2
+
+required: true

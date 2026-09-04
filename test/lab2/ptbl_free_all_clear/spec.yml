@@ -1,0 +1,3 @@
+name: Page Table Free - All Entries Clear
+description: Verifies that ptbl_free correctly frees a page table when all entries are clear (not present), clearing the entry and freeing the page.
+points: 0.05

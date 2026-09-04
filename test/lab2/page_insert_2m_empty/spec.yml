@@ -1,0 +1,3 @@
+name: Page Insert - 2MB Empty
+description: Tests that page_insert correctly allocates and sets up all intermediate page table levels (PML4, PDPT, PD) when inserting a 2MB huge page into an empty page table structure
+points: 0.05

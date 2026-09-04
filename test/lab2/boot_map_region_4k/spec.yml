@@ -1,0 +1,5 @@
+name: Boot Map Region - 4KB Page
+description: Tests boot_map_region with a single 4KB page mapping
+points: 0.3
+
+required: true

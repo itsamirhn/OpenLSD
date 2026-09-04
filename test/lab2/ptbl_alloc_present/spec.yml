@@ -1,0 +1,5 @@
+name: Page Table Alloc - Present Entry
+description: Verifies that ptbl_alloc does not modify an entry or change page reference counts when the entry already has PAGE_PRESENT set.
+points: 0.05
+
+required: true

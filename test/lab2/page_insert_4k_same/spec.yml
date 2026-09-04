@@ -1,0 +1,5 @@
+name: Page Insert 4K - Same Page Twice
+description: Tests that re-inserting the same 4KB page at the same virtual address does not free the page (page_free is not called), ensuring the page reference count remains correct
+points: 0.05
+
+required: true

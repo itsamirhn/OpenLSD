@@ -1,0 +1,5 @@
+name: Page Table Merge - Mismatched Flags
+description: Verifies that ptbl_merge does not merge entries when they have mismatched flags, leaving the entry unchanged.
+points: 0.1
+
+required: true

@@ -1,0 +1,5 @@
+name: Page Insert - Split THP
+description: Tests that inserting a 4KB page into a 2MB huge page correctly splits the huge page into a page table (PT) with 512 4KB pages, copies data from the huge page to the new pages, frees the huge page, and invalidates the TLB
+points: 0.2
+
+required: true

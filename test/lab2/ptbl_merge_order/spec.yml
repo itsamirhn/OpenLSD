@@ -1,0 +1,5 @@
+name: Page Table Merge - Order of Operations
+description: Verifies that ptbl_merge completes merge operations in the correct order before freeing the old page table, ensuring page_decref is called with the correct huge page containing all merged data.
+points: 0.1
+
+required: true

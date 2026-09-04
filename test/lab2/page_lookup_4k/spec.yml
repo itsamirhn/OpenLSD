@@ -1,0 +1,5 @@
+name: Page Lookup - 4KB
+description: Tests that page_lookup correctly returns the page and entry store for a 4KB page
+points: 0.2
+
+required: true

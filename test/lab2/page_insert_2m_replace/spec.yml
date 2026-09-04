@@ -1,0 +1,3 @@
+name: Page Insert - 2MB Replace
+description: Tests that page_insert correctly replaces an existing 2MB huge page with a new one, decrements the old page's reference count, invalidates the TLB, and sets up the new page entry
+points: 0.05

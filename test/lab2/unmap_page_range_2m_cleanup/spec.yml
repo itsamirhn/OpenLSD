@@ -1,0 +1,3 @@
+name: Unmap Page Range - 2MB Cleanup
+description: Tests that unmapping a single 2MB huge page frees all upper-level page tables
+points: 0.05

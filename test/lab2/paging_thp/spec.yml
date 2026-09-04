@@ -1,0 +1,5 @@
+name: Paging - Transparent 2M Pages
+description: Checks that 2M pages can be paged transparently
+points: 0.4
+
+required: true

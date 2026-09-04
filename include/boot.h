@@ -14,7 +14,7 @@
 struct __attribute__((packed)) boot_info {
 	uint32_t mmap_addr;
 	uint32_t mmap_len;
-	void *elf_hdr;
+	physaddr_t elf_hdr;
 };
 
 enum mmap_type {

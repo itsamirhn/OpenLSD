@@ -1,0 +1,6 @@
+name: Page Walker - Page Directory Level Non-Huge Page Walk
+description: This tests that pdir_walk_range correctly calls
+  ptbl_walk_range for non-huge page entries.
+points: 0.1
+
+required: true
