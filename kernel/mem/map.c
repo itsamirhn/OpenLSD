@@ -95,6 +95,8 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 
 	for (i = 0; i < boot_info->mmap_len; ++i, ++entry) {
 		switch (entry->type) {
+			case MMAP_BAD:
+				continue;
 			case MMAP_FREE:
 				flags = PAGE_PRESENT | PAGE_WRITE;
 				break;
@@ -102,7 +104,7 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 				flags = PAGE_PRESENT;
 				break;
 		}
-		boot_map_region(pml4, (void *)(KERNEL_VMA + entry->addr), entry->len, entry->addr, flags);
+		boot_map_region(pml4, KADDR(entry->addr), entry->len, entry->addr, flags);
 	}
 
 }
@@ -144,6 +146,4 @@ void boot_map_elf(struct page_table *pml4, struct elf *elf_hdr)
 		boot_map_region(pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz,
 		    prog_hdr->p_pa, flags);
 	}
-
-	/* LAB 2: your code here. */
 }

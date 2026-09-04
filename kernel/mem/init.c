@@ -48,7 +48,7 @@ int pml4_setup(struct boot_info *boot_info)
 	 */
 
 
-	boot_map_elf(kernel_pml4, KADDR((physaddr_t)boot_info->elf_hdr));
+	boot_map_elf(kernel_pml4, KADDR(boot_info->elf_hdr));
 
 
 	/* Use the physical memory that 'bootstack' refers to as the kernel
