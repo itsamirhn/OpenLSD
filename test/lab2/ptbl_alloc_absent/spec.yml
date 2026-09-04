@@ -1,0 +1,5 @@
+name: Page Table Alloc - Absent Entry
+description: Verifies that ptbl_alloc allocates a new page table page when the entry is not present, sets appropriate flags, and establishes a reference count of 1.
+points: 0.05
+
+required: true

@@ -1,0 +1,5 @@
+name: Boot Map Region - 2MB Huge Page
+description: Tests boot_map_region with a single 2MB huge page mapping
+points: 0.3
+
+required: true

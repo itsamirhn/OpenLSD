@@ -1,7 +1,8 @@
 {
 	"name": "OpenLSD Development",
 	"build": {
-		"dockerfile": "Dockerfile"
+		"dockerfile": "Dockerfile",
+		"options": ["--platform=linux/amd64"]
 	},
 	"runArgs": ["--platform=linux/amd64" ],
 	"capAdd": [ "SYS_PTRACE" ],

@@ -1,0 +1,5 @@
+name: Page Insert - 4KB Existing
+description: Tests that page_insert correctly handles re-inserting the same 4KB page at an existing address and inserting a new 4KB page at a different address in the same page table
+points: 0.05
+
+required: true

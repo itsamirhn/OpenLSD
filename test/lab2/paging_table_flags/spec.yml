@@ -1,0 +1,10 @@
+name: Paging - Check Table Flags
+description: Checks the permission flags on the pages used for storing page tables
+points: 0.2
+
+required: true
+
+---
+
+name: (1325MiB)
+qemu: -m 1325M

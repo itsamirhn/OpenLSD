@@ -1,0 +1,10 @@
+name: Paging - Check W^X Exclusion
+description: Ensures for all page table entries that none of them are mapped as write+execute
+points: 0.2
+
+required: true
+
+---
+
+name: (1523M)
+qemu: -m 1523M

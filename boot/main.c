@@ -44,7 +44,7 @@ void bootmain(struct boot_info *boot_info)
 {
 	struct elf_proghdr *ph, *eph;
 
-	boot_info->elf_hdr = ELFHDR;
+	boot_info->elf_hdr = (physaddr_t) ELFHDR;
 
 	/* read 1st page off disk */
 	readseg((uint32_t) ELFHDR, SECTSIZE * 8, 0);

@@ -1,0 +1,5 @@
+name: Page Table Split - Absent Entry
+description: Verifies that ptbl_split allocates a new page table when the entry is not present, setting appropriate flags without PAGE_HUGE.
+points: 0.1
+
+required: true

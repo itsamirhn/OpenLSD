@@ -1,0 +1,3 @@
+name: Page Table Free - With Present Page
+description: Verifies that ptbl_free does not free a page table when it contains at least one present entry, leaving the entry and page table unchanged.
+points: 0.05

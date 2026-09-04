@@ -1,0 +1,5 @@
+name: Page Table Split - Huge Page
+description: Verifies that ptbl_split correctly splits a 2M huge page into 512 individual 4K pages, preserving all data, and calls TLB invalidation with the correct address.
+points: 0.1
+
+required: true

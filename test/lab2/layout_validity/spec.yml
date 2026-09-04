@@ -1,0 +1,13 @@
+name: Layout - Virtual Address Space Validity
+description: Tests that all page table entries are valid
+points: 0.4
+
+required: true
+
+---
+
+name: (3GiB)
+qemu: -m 3G
+---
+name: (1523M)
+qemu: -m 1523M

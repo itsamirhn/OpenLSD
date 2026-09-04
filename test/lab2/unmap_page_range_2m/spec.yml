@@ -1,0 +1,3 @@
+name: Unmap Page Range - 2MB Huge Page
+description: Tests unmap_page_range with a single 2MB huge page
+points: 0.05

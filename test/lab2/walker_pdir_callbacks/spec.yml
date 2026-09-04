@@ -1,0 +1,5 @@
+name: Page Walker - Page Directory Level Callbacks
+description: This tests the callback behaviour of pdir_walk_range.
+points: 0.1
+
+required: true

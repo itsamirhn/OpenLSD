@@ -1,0 +1,5 @@
+name: Unmap Page Range - 4KB Cleanup
+description: Tests that unmapping a single 4KB page frees all upper-level page tables
+points: 0.05
+
+required: true

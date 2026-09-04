@@ -1,0 +1,5 @@
+name: Page Table Split - Non-Huge Entry
+description: Verifies that ptbl_split does not modify an entry or change page reference counts when the entry does not point to a huge page (PAGE_HUGE flag is not set).
+points: 0.1
+
+required: true

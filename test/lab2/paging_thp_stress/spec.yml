@@ -1,0 +1,3 @@
+name: Paging - THP Stresstest
+description: Stresstesting the THP functionality by repeated mergers and splits
+points: 0.4

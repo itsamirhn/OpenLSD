@@ -1,0 +1,5 @@
+name: Page Lookup - 2MB
+description: Tests that page_lookup correctly returns the page and entry store for a 2MB huge page
+points: 0.2
+
+required: true
