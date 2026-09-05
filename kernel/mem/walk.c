@@ -222,6 +222,7 @@ static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t en
 		}else if(walker->pt_hole_callback != NULL){
 			walker->pt_hole_callback(curr_base, curr_end, walker);
 		}
+		base = curr_end + 1;
 	}
 	return 0;
 }
