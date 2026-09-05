@@ -121,8 +121,8 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 
 	for(i = PAGE_DIR_INDEX(base); i <= PAGE_DIR_INDEX(end) && base < end; ++i){
 		entry = pdir->entries[i];
-		curr_base = pdir_start(base);
-		curr_end = pdir_end(base);
+		curr_base = MAX(base, pdir_start(base));
+		curr_end = entry & PAGE_HUGE ? pdir_end(base) : MIN(end, pdir_end(base));
 		if(walker->pde_callback != NULL){
 			walker->pde_callback(&pdir->entries[i], curr_base, curr_end, walker);
 		}
@@ -165,8 +165,8 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 
 	for(i = PDPT_INDEX(base); i <= PDPT_INDEX(end) && base < end; ++i){
 		entry = pdpt->entries[i];
-		curr_base = pdpt_start(base);
-		curr_end = pdpt_end(base);
+		curr_base = MAX(base, pdpt_start(base));
+		curr_end = MIN(end, pdpt_end(base));
 		if(walker->pdpte_callback != NULL){
 			walker->pdpte_callback(&pdpt->entries[i], curr_base, curr_end, walker);
 		}
@@ -207,8 +207,8 @@ static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t en
 
 	for(i = PML4_INDEX(base); i <= PML4_INDEX(end) && base < end; ++i){
 		entry = pml4->entries[i];
-		curr_base = pml4_start(base);
-		curr_end = pml4_end(base);
+		curr_base = sign_extend(MAX(base, pml4_start(base)));
+		curr_end = sign_extend(MIN(end, pml4_end(base)));
 		if(walker->pml4e_callback != NULL){
 			walker->pml4e_callback(&pml4->entries[i], curr_base, curr_end, walker);
 		}
