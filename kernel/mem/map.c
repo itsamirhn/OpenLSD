@@ -104,7 +104,7 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 				flags = PAGE_PRESENT;
 				break;
 		}
-		boot_map_region(pml4, KADDR(entry->addr), entry->len, entry->addr, flags);
+		boot_map_region(pml4, (void *)entry->addr + KERNEL_VMA, entry->len, entry->addr, flags);
 	}
 
 }

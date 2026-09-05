@@ -1,7 +1,5 @@
 
 #include "x86-64/types.h"
-#include <cassert>
-#include <stdint.h>
 #include <types.h>
 #include <paging.h>
 
