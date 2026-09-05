@@ -1,7 +1,4 @@
 
-#include "x86-64/types.h"
-#include <cassert>
-#include <stdint.h>
 #include <types.h>
 #include <paging.h>
 
@@ -75,27 +72,27 @@ static int ptbl_walk_range(struct page_table *ptbl, uintptr_t base,
 
 	uint32_t i;
 	int ret;
-	uintptr_t b, e;
+	uintptr_t curr_base, curr_end;
 	physaddr_t * entry;
 
 	for (i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end) && base < end; ++i) {
 		entry = &ptbl->entries[i];
-		b = ptbl_start(base);
-		e = ptbl_end(base);
+		curr_base = ptbl_start(base);
+		curr_end = ptbl_end(base);
 
 		if (walker->pte_callback != NULL) {
-			ret = walker->pte_callback(entry, b, e, walker);
+			ret = walker->pte_callback(entry, curr_base, curr_end, walker);
 			if (ret < 0) {
 				return ret;
 			}
 		}
 		if (walker->pt_hole_callback != NULL && !(*entry & PAGE_PRESENT)) {
-			ret = walker->pt_hole_callback(b, e, walker);
+			ret = walker->pt_hole_callback(curr_base, curr_end, walker);
 			if (ret < 0) {
 				return ret;
 			}
 		}
-		base = e + 1;
+		base = curr_end + 1;
 	}
 
 	return 0;
@@ -116,15 +113,16 @@ static int ptbl_walk_range(struct page_table *ptbl, uintptr_t base,
 static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
-	uintptr_t i, curr_base, curr_end;
+	uint32_t i;
+	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
 	struct page_table *ptbl;
 
-	for(i = PAGE_DIR_INDEX(base); i <= PAGE_DIR_INDEX(end); ++i){
+	for(i = PAGE_DIR_INDEX(base); i <= PAGE_DIR_INDEX(end) && base < end; ++i){
 		entry = pdir->entries[i];
-		curr_base = MAX(base, i << PAGE_DIR_SHIFT);
-		curr_end = MIN(end, ((i + 1) << PAGE_DIR_SHIFT) - 1);
+		curr_base = pdir_start(base);
+		curr_end = pdir_end(base);
 		if(walker->pde_callback != NULL){
 			walker->pde_callback(&pdir->entries[i], curr_base, curr_end, walker);
 		}
@@ -139,6 +137,7 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 		}else if(walker->pt_hole_callback != NULL){
 			walker->pt_hole_callback(curr_base, curr_end, walker);
 		}
+		base = curr_end + 1;
 	}
 	return 0;
 }
@@ -158,15 +157,16 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
-	uintptr_t i, curr_base, curr_end;
+	uint32_t i;
+	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
 	struct page_table *pdir;
 
-	for(i = PDPT_INDEX(base); i <= PDPT_INDEX(end); ++i){
+	for(i = PDPT_INDEX(base); i <= PDPT_INDEX(end) && base < end; ++i){
 		entry = pdpt->entries[i];
-		curr_base = MAX(base, i << PDPT_SHIFT);
-		curr_end = MIN(end, ((i + 1) << PDPT_SHIFT) - 1);
+		curr_base = pdpt_start(base);
+		curr_end = pdpt_end(base);
 		if(walker->pdpte_callback != NULL){
 			walker->pdpte_callback(&pdpt->entries[i], curr_base, curr_end, walker);
 		}
@@ -179,6 +179,7 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 		}else if(walker->pt_hole_callback != NULL){
 			walker->pt_hole_callback(curr_base, curr_end, walker);
 		}
+		base = curr_end + 1;
 	}
 	return 0;
 }
@@ -198,15 +199,16 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	uintptr_t i, curr_base, curr_end;
+	uint32_t i;
+	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
 	struct page_table *pdpt;
 
-	for(i = PML4_INDEX(base); i <= PML4_INDEX(end); ++i){
+	for(i = PML4_INDEX(base); i <= PML4_INDEX(end) && base < end; ++i){
 		entry = pml4->entries[i];
-		curr_base = MAX(base, i << PML4_SHIFT);
-		curr_end = MIN(end, ((i + 1) << PML4_SHIFT) - 1);
+		curr_base = pml4_start(base);
+		curr_end = pml4_end(base);
 		if(walker->pml4e_callback != NULL){
 			walker->pml4e_callback(&pml4->entries[i], curr_base, curr_end, walker);
 		}
