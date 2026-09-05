@@ -1,4 +1,7 @@
 
+#include "x86-64/types.h"
+#include <cassert>
+#include <stdint.h>
 #include <types.h>
 #include <paging.h>
 
@@ -68,6 +71,32 @@ static uintptr_t pml4_start(uintptr_t addr)
 static int ptbl_walk_range(struct page_table *ptbl, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
+	if (end < base) return 0;
+
+	uint32_t i;
+	int ret;
+	uintptr_t b, e;
+	physaddr_t * entry;
+
+	for (i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end) && base < end; ++i) {
+		entry = &ptbl->entries[i];
+		b = ptbl_start(base);
+		e = ptbl_end(base);
+
+		if (walker->pte_callback != NULL) {
+			ret = walker->pte_callback(entry, b, e, walker);
+			if (ret < 0) {
+				return ret;
+			}
+		}
+		if (walker->pt_hole_callback != NULL && !(*entry & PAGE_PRESENT)) {
+			ret = walker->pt_hole_callback(b, e, walker);
+			if (ret < 0) {
+				return ret;
+			}
+		}
+		base = e + 1;
+	}
 
 	return 0;
 }
