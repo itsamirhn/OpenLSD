@@ -114,6 +114,7 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
 	uint32_t i;
+	int ret;
 	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
@@ -124,18 +125,27 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 		curr_base = MAX(base, pdir_start(base));
 		curr_end = entry & PAGE_HUGE ? pdir_end(base) : MIN(end, pdir_end(base));
 		if(walker->pde_callback != NULL){
-			walker->pde_callback(&pdir->entries[i], curr_base, curr_end, walker);
+			ret = walker->pde_callback(&pdir->entries[i], curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		if(PAGE_PRESENT & entry){
 			if(!(PAGE_HUGE & entry)){
 				ptbl = KADDR(PAGE_ADDR(entry));
 				ptbl_walk_range(ptbl, curr_base, curr_end, walker);
 				if(walker->pde_unmap != NULL){
-					walker->pde_unmap(&pdir->entries[i], curr_base, curr_end, walker);
+					ret = walker->pde_unmap(&pdir->entries[i], curr_base, curr_end, walker);
+					if (ret < 0) {
+						return ret;
+					}
 				}	
 		}
 		}else if(walker->pt_hole_callback != NULL){
-			walker->pt_hole_callback(curr_base, curr_end, walker);
+			ret = walker->pt_hole_callback(curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		base = curr_end + 1;
 	}
@@ -158,6 +168,7 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
     uintptr_t end, struct page_walker *walker)
 {
 	uint32_t i;
+	int ret;
 	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
@@ -168,16 +179,25 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 		curr_base = MAX(base, pdpt_start(base));
 		curr_end = MIN(end, pdpt_end(base));
 		if(walker->pdpte_callback != NULL){
-			walker->pdpte_callback(&pdpt->entries[i], curr_base, curr_end, walker);
+			ret = walker->pdpte_callback(&pdpt->entries[i], curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		if(PAGE_PRESENT & entry){
 			pdir = KADDR(PAGE_ADDR(entry));
 			pdir_walk_range(pdir, curr_base, curr_end, walker);
 			if(walker->pdpte_unmap != NULL){
-				walker->pdpte_unmap(&pdpt->entries[i], curr_base, curr_end, walker);
+				ret = walker->pdpte_unmap(&pdpt->entries[i], curr_base, curr_end, walker);
+				if (ret < 0) {
+					return ret;
+				}
 			}	
 		}else if(walker->pt_hole_callback != NULL){
-			walker->pt_hole_callback(curr_base, curr_end, walker);
+			ret = walker->pt_hole_callback(curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		base = curr_end + 1;
 	}
@@ -200,6 +220,7 @@ static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t en
     struct page_walker *walker)
 {
 	uint32_t i;
+	int ret;
 	uintptr_t curr_base, curr_end;
 	physaddr_t entry;
 
@@ -210,17 +231,26 @@ static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t en
 		curr_base = sign_extend(MAX(base, pml4_start(base)));
 		curr_end = sign_extend(MIN(end, pml4_end(base)));
 		if(walker->pml4e_callback != NULL){
-			walker->pml4e_callback(&pml4->entries[i], curr_base, curr_end, walker);
+			ret = walker->pml4e_callback(&pml4->entries[i], curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		if(PAGE_PRESENT & entry){
 			pdpt = KADDR(PAGE_ADDR(entry));
 
 			pdpt_walk_range(pdpt, curr_base, curr_end, walker);
 			if(walker->pml4e_unmap != NULL){
-				walker->pml4e_unmap(&pml4->entries[i], curr_base, curr_end, walker);
+				ret = walker->pml4e_unmap(&pml4->entries[i], curr_base, curr_end, walker);
+				if (ret < 0) {
+					return ret;
+				}
 			}	
 		}else if(walker->pt_hole_callback != NULL){
-			walker->pt_hole_callback(curr_base, curr_end, walker);
+			ret = walker->pt_hole_callback(curr_base, curr_end, walker);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 		base = curr_end + 1;
 	}
