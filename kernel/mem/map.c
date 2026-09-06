@@ -36,11 +36,12 @@ static int boot_map_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct boot_map_info *info = walker->udata;
 
-	*entry = info->pa | info->flags;
 
 	if (hpage_aligned(info->pa)) {
+		*entry = info->pa | info->flags | PAGE_HUGE;
 		info->pa += HPAGE_SIZE;
 	} else {
+		*entry = 0;
 		ptbl_alloc(entry, base, end, walker);
 	}
 
