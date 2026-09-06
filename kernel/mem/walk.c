@@ -129,10 +129,10 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 				ptbl = KADDR(PAGE_ADDR(*entry));
 				ret = ptbl_walk_range(ptbl, base, MIN(end, curr_end), walker);
 				if (ret < 0) return ret;
-				if (walker->pde_unmap != NULL){
-					ret = walker->pde_unmap(entry, curr_base, curr_end, walker);
-					if (ret < 0) return ret;
-				}	
+			}
+			if (walker->pde_unmap != NULL){
+				ret = walker->pde_unmap(entry, curr_base, curr_end, walker);
+				if (ret < 0) return ret;
 			}
 		} else if(walker->pt_hole_callback != NULL){
 			ret = walker->pt_hole_callback(curr_base, curr_end, walker);
