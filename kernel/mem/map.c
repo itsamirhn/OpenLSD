@@ -109,8 +109,8 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 			case MMAP_BAD:
 				continue;
 			case MMAP_FREE:
-				flags = PAGE_PRESENT | PAGE_WRITE;
-				break;
+				flags = PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC;
+				break;	
 			default:
 				flags = PAGE_PRESENT;
 				break;

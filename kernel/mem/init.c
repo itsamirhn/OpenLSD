@@ -57,7 +57,7 @@ int pml4_setup(struct boot_info *boot_info)
 	 */
 
 	boot_map_region(kernel_pml4, (void *) KSTACK_TOP - KSTACK_SIZE, KSTACK_SIZE,
-	 	PADDR((void *)KSTACK_TOP - KSTACK_SIZE), PAGE_PRESENT | PAGE_WRITE);
+	 	PADDR((void *)KSTACK_TOP - KSTACK_SIZE), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
 
 	 
 	/* Map in the metadata pages from the buddy allocator as RW-. */
