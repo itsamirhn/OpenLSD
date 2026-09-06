@@ -2,6 +2,7 @@
 #include <types.h>
 #include <string.h>
 #include <paging.h>
+#include <error.h>
 
 #include <kernel/mem.h>
 
@@ -14,7 +15,19 @@
 int ptbl_alloc(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+	if (*entry & PAGE_PRESENT) {
+		return 0;
+	}
+
+	struct page_info *page;
+	page = page_alloc(ALLOC_ZERO);
+	if (page == NULL) {
+		return -ENOMEM;
+	}
+
+	*entry = page2pa(page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+	page->pp_ref++;
+	
 	return 0;
 }
 
