@@ -19,7 +19,10 @@ static int boot_map_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct boot_map_info *info = walker->udata;
 
-	/* LAB 2: your code here. */
+	*entry = info->pa | info->flags;
+
+	info->pa += PAGE_SIZE;
+
 	return 0;
 }
 
@@ -33,7 +36,14 @@ static int boot_map_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct boot_map_info *info = walker->udata;
 
-	/* LAB 2: your code here. */
+	*entry = info->pa | info->flags;
+
+	if (hpage_aligned(info->pa)) {
+		info->pa += HPAGE_SIZE;
+	} else {
+		ptbl_alloc(entry, base, end, walker);
+	}
+
 	return 0;
 }
 
@@ -55,7 +65,6 @@ static int boot_map_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 void boot_map_region(struct page_table *pml4, void *va, size_t size,
     physaddr_t pa, uint64_t flags)
 {
-	/* LAB 2: your code here. */
 	struct boot_map_info info = {
 		.pa = pa,
 		.flags = flags,
