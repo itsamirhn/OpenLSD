@@ -103,6 +103,22 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 int ptbl_free(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	/* LAB 2: your code here. */
+	if (!(*entry & PAGE_PRESENT)) {
+		return 0;
+	}
+	
+	struct page_info *ptbl_page = pa2page(PAGE_ADDR(*entry));
+	struct page_table *ptbl = page2kva(ptbl_page);
+
+	uint32_t i;
+	for (i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
+		if (ptbl->entries[i] & PAGE_PRESENT) {
+			return 0;
+		}
+	}
+
+	page_decref(ptbl_page);	
+	*entry = 0;
+
 	return 0;
 }
