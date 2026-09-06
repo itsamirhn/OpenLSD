@@ -64,7 +64,13 @@ int ptbl_alloc(physaddr_t *entry, uintptr_t base, uintptr_t end,
 int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
+	if (!(*entry & PAGE_PRESENT)) return ptbl_alloc(entry, base, end, walker);
+
+	if (!(*entry & PAGE_HUGE)) return 0;
+
+
 	/* LAB 2: your code here. */
+
 	return 0;
 }
 
