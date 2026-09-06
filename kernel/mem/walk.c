@@ -127,7 +127,7 @@ static int pdir_walk_range(struct page_table *pdir, uintptr_t base,
 		if (PAGE_PRESENT & *entry) {
 			if (!(PAGE_HUGE & *entry)) {
 				ptbl = KADDR(PAGE_ADDR(*entry));
-				ret = ptbl_walk_range(ptbl, curr_base, MIN(end, curr_end), walker);
+				ret = ptbl_walk_range(ptbl, base, MIN(end, curr_end), walker);
 				if (ret < 0) return ret;
 				if (walker->pde_unmap != NULL){
 					ret = walker->pde_unmap(entry, curr_base, curr_end, walker);
@@ -175,7 +175,7 @@ static int pdpt_walk_range(struct page_table *pdpt, uintptr_t base,
 		}
 		if (PAGE_PRESENT & *entry){
 			pdir = KADDR(PAGE_ADDR(*entry));
-			ret = pdir_walk_range(pdir, curr_base, MIN(end, curr_end), walker);
+			ret = pdir_walk_range(pdir, base, MIN(end, curr_end), walker);
 			if (ret < 0) return ret;
 			if (walker->pdpte_unmap != NULL){
 				ret = walker->pdpte_unmap(entry, curr_base, curr_end, walker);
@@ -223,7 +223,7 @@ static int pml4_walk_range(struct page_table *pml4, uintptr_t base, uintptr_t en
 		if(PAGE_PRESENT & *entry){
 			pdpt = KADDR(PAGE_ADDR(*entry));
 
-			ret = pdpt_walk_range(pdpt, curr_base, MIN(end, curr_end), walker);
+			ret = pdpt_walk_range(pdpt, base, MIN(end, curr_end), walker);
 			if (ret < 0) return ret;
 
 			if (walker->pml4e_unmap != NULL){
