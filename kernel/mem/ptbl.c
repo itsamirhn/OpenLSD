@@ -68,8 +68,28 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	if (!(*entry & PAGE_HUGE)) return 0;
 
+	struct page_info *huge_page = pa2page(PAGE_ADDR(*entry));
+	struct page_info *ptbl_page = page_alloc(ALLOC_ZERO);
+	struct page_table *ptbl = page2kva(ptbl_page);
+	uint32_t flags = *entry & PAGE_UMASK;
 
-	/* LAB 2: your code here. */
+	if (huge_page->pp_ref == 0 && huge_page->pp_free == 0) {
+		for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) ptbl->entries[i] = (page2pa(huge_page) + (i * PAGE_SIZE)) | flags;
+		*entry = page2pa(ptbl_page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+		return 0;
+	}
+
+	for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) {
+		struct page_info *p = page_alloc(ALLOC_ZERO);
+		p->pp_ref++;
+		memcpy(page2kva(p), page2kva(huge_page) + (i * PAGE_SIZE), PAGE_SIZE);
+		ptbl->entries[i] = page2pa(p) | flags;
+	}
+
+	*entry = page2pa(ptbl_page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+	page_decref(huge_page);
+
+	// TODO: Probably tlb invalidate
 
 	return 0;
 }
