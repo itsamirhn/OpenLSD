@@ -151,7 +151,7 @@ void mem_init(struct boot_info *boot_info)
 	pml4_setup(boot_info);
 
 	/* Enable the NX-bit. */
-	/* LAB 2: your code here. */
+	write_msr(MSR_EFER, read_msr(MSR_EFER) | MSR_EFER_NXE);
 
 	// TODO improve this
 	// We cannot intercept load_pml4 since it is a static method, so there
