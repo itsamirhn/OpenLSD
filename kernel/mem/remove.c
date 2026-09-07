@@ -60,7 +60,6 @@ static int remove_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 /* Unmaps the range of pages from [va, va + size). */
 void unmap_page_range(struct page_table *pml4, void *va, size_t size)
 {
-	/* LAB 2: your code here. */
 	struct remove_info info = {
 		.pml4 = pml4,
 		.base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE),
@@ -69,7 +68,9 @@ void unmap_page_range(struct page_table *pml4, void *va, size_t size)
 	struct page_walker walker = {
 		.pte_callback = remove_pte,
 		.pde_callback = remove_pde,
-		/* LAB 2: your code here. */
+		.pde_unmap = ptbl_free,
+		.pdpte_unmap = ptbl_free,
+		.pml4e_unmap = ptbl_free,
 		.udata = &info,
 	};
 
