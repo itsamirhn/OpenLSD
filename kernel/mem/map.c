@@ -67,6 +67,7 @@ void boot_map_region(struct page_table *pml4, void *va, size_t size,
     physaddr_t pa, uint64_t flags)
 {
 	struct boot_map_info info = {
+		.pml4 = pml4,
 		.pa = pa,
 		.flags = flags,
 		.base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE),

@@ -78,7 +78,9 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 int page_insert(struct page_table *pml4, struct page_info *page, void *va,
     uint64_t flags)
 {
-	struct insert_info info;
+	struct insert_info info = {
+		.pml4 = pml4,
+	};
 	struct page_walker walker = {
 		.pte_callback = insert_pte,
 		.pde_callback = insert_pde,
