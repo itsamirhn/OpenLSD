@@ -64,7 +64,7 @@ int pml4_setup(struct boot_info *boot_info)
 
 
 	boot_map_region(kernel_pml4, (void *) KPAGES, npages * sizeof(struct page_info),
-		KPAGES, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC );
+		PADDR(pages), PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC );
 
 
 	/* Map in the video memory; range [IO_PHYS_MEM, EXT_PHYS_MEM) as RW- */
