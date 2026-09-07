@@ -89,8 +89,6 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	*entry = page2pa(ptbl_page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
 	page_decref(huge_page);
 
-	// TODO: Probably tlb invalidate
-
 	return 0;
 }
 
@@ -115,8 +113,28 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
  */
 int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
-{
-	/* LAB 2: your code here. */
+{	
+	if (!(*entry & PAGE_PRESENT)) return 0;
+	if (*entry & PAGE_HUGE) return 0;
+
+	struct page_info *ptbl_page = pa2page(PAGE_ADDR(*entry));
+	struct page_table *ptbl = page2kva(ptbl_page);
+
+	uint32_t flags = ptbl->entries[0] & PAGE_UMASK;
+	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
+		if (!(ptbl->entries[i] & PAGE_PRESENT)) return 0;
+		if ((ptbl->entries[i] & PAGE_UMASK) != flags) return 0;
+		if (pa2page(PAGE_ADDR(ptbl->entries[i]))->pp_avail == 0) return 0;
+	}
+
+	struct page_info *huge_page = page_alloc(ALLOC_ZERO | ALLOC_HUGE);
+	huge_page->pp_ref++;
+	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) memcpy(page2kva(huge_page + i), page2kva(pa2page(PAGE_ADDR(ptbl->entries[i]))), PAGE_SIZE);
+
+	*entry = page2pa(huge_page) | flags | PAGE_HUGE;
+	page_decref(ptbl_page);
+	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) page_decref(pa2page(PAGE_ADDR(ptbl->entries[i])));
+
 	return 0;
 }
 
