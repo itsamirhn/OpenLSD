@@ -70,6 +70,7 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	struct page_info *huge_page = pa2page(PAGE_ADDR(*entry));
 	struct page_info *ptbl_page = page_alloc(ALLOC_ZERO);
+	ptbl_page->pp_ref++;
 	struct page_table *ptbl = page2kva(ptbl_page);
 	uint32_t flags = *entry & PAGE_UMASK;
 
