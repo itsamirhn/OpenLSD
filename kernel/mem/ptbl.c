@@ -156,7 +156,7 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 int ptbl_free(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	if (!(*entry & PAGE_PRESENT)) {
+	if (!(*entry & PAGE_PRESENT) || (*entry & PAGE_HUGE)) {
 		return 0;
 	}
 	
@@ -170,8 +170,8 @@ int ptbl_free(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		}
 	}
 
-	page_decref(ptbl_page);	
 	*entry = 0;
+	page_decref(ptbl_page);	
 
 	return 0;
 }
