@@ -21,7 +21,16 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct insert_info *info = walker->udata;
 	struct page_info *page;
 
-	/* LAB 2: your code here. */
+	if (*entry & PAGE_PRESENT) {
+		page = pa2page(PAGE_ADDR(*entry));
+		tlb_invalidate(info->pml4, (void *)base);
+		page_decref(page);
+		*entry = 0;
+	}
+
+	info->page->pp_ref++;
+	*entry = page2pa(info->page) | info->flags | PAGE_PRESENT;
+
 	return 0;
 }
 
