@@ -88,8 +88,11 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	}
 
 	*entry = page2pa(ptbl_page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+
+	struct page_table *pml4 = walker ? *(struct page_table **)walker->udata : NULL; // remove_info, insert_info, boot_map_info all have it as first element
+	tlb_invalidate(pml4, (void *)base);
+
 	page_decref(huge_page);
-	tlb_invalidate(NULL, (void *)base);
 
 	return 0;
 }
@@ -134,7 +137,11 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) memcpy(page2kva(huge_page + i), page2kva(pa2page(PAGE_ADDR(ptbl->entries[i]))), PAGE_SIZE);
 
 	*entry = page2pa(huge_page) | flags | PAGE_HUGE;
-	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) page_decref(pa2page(PAGE_ADDR(ptbl->entries[i])));
+	struct page_table *pml4 = walker ? *(struct page_table **)walker->udata : NULL; // remove_info, insert_info, boot_map_info all have it as first element
+	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {;
+		tlb_invalidate(pml4, (void *)(base + (i * PAGE_SIZE)));
+		page_decref(pa2page(PAGE_ADDR(ptbl->entries[i])));
+	}
 	page_decref(ptbl_page);
 
 	return 0;
