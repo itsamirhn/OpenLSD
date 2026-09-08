@@ -25,12 +25,12 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
+		*entry = 0;
 		tlb_invalidate(info->pml4, (void *)base);
 		page_decref(page);
-		*entry = 0;
 	}
 
-	*entry = page2pa(info->page) | info->flags | PAGE_PRESENT;
+	*entry = page2pa(info->page) | (info->flags & ~(uint64_t)PAGE_HUGE) | PAGE_PRESENT;
 
 	return 0;
 }
@@ -64,9 +64,10 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		} else {
 			table = page2kva(page);
 			for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) if (table->entries[i] & PAGE_PRESENT) {
+					struct page_info *p = pa2page(PAGE_ADDR(table->entries[i]));
 					table->entries[i] = 0;
 					tlb_invalidate(info->pml4, (void *)(base + (i * PAGE_SIZE)));
-					page_decref(pa2page(PAGE_ADDR(table->entries[i])));
+					page_decref(p);
 			}
 			*entry = 0;
 			tlb_invalidate(info->pml4, (void *)base);
@@ -124,9 +125,9 @@ int page_insert(struct page_table *pml4, struct page_info *page, void *va,
 	
 	if (!(flags & PAGE_PRESENT)) return -1;
 
-	if (page->pp_order == BUDDY_2M_PAGE && (flags & PAGE_HUGE) && hpage_aligned((uintptr_t)va)) {
+	if (page->pp_order == BUDDY_2M_PAGE && hpage_aligned((uintptr_t)va)) {
 		return walk_page_range(pml4, va, va + HPAGE_SIZE, &walker);
-	} else if (page->pp_order == BUDDY_4K_PAGE && !(flags & PAGE_HUGE)) {
+	} else if (page->pp_order == BUDDY_4K_PAGE) {
 		walker.pde_callback = ptbl_split;
 		walker.pde_unmap = ptbl_merge;
 		return walk_page_range(pml4, va, va + PAGE_SIZE, &walker);
