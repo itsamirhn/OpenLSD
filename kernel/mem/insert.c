@@ -21,6 +21,8 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct insert_info *info = walker->udata;
 	struct page_info *page;
 
+	info->page->pp_ref++; // Because of same page re-insert, increment the reference count first
+
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
 		tlb_invalidate(info->pml4, (void *)base);
@@ -28,7 +30,6 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		*entry = 0;
 	}
 
-	info->page->pp_ref++;
 	*entry = page2pa(info->page) | info->flags | PAGE_PRESENT;
 
 	return 0;
