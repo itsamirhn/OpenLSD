@@ -89,17 +89,25 @@ int page_insert(struct page_table *pml4, struct page_info *page, void *va,
 {
 	struct insert_info info = {
 		.pml4 = pml4,
+		.page = page,
+		.flags = flags,
 	};
 	struct page_walker walker = {
 		.pte_callback = insert_pte,
 		.pde_callback = insert_pde,
-		/* LAB 2: your code here. */
+		.pml4e_callback = ptbl_alloc,
+		.pdpte_callback = ptbl_alloc,
 		.udata = &info,
 	};
+	
+	if (!(flags & PAGE_PRESENT)) return -1;
 
-	/* LAB 2: your code here. */
-
-	// Hint: use the walker as follows
-	// walk_page_range(pml4, va, va_end, &walker);
+	if (page->pp_order == BUDDY_2M_PAGE && (flags & PAGE_HUGE) && hpage_aligned((uintptr_t)va)) {
+		return walk_page_range(pml4, va, va + HPAGE_SIZE, &walker);
+	} else if (page->pp_order == BUDDY_4K_PAGE && !(flags & PAGE_HUGE)) {
+		walker.pde_callback = ptbl_split;
+		walker.pde_unmap = ptbl_merge;
+		return walk_page_range(pml4, va, va + PAGE_SIZE, &walker);
+	}
 	return -1;
 }
