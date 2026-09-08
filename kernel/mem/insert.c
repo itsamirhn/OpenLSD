@@ -54,7 +54,28 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *page;
 	struct page_table *table;
 
-	/* LAB 2: your code here. */
+	info->page->pp_ref++; // Because of same page re-insert, increment the reference count first
+	if (*entry & PAGE_PRESENT) {
+		page = pa2page(PAGE_ADDR(*entry));
+		if (*entry & PAGE_HUGE) {
+			*entry = 0;
+			tlb_invalidate(info->pml4, (void *)base);
+			page_decref(page);
+		} else {
+			table = page2kva(page);
+			for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) if (table->entries[i] & PAGE_PRESENT) {
+					table->entries[i] = 0;
+					tlb_invalidate(info->pml4, (void *)(base + (i * PAGE_SIZE)));
+					page_decref(pa2page(PAGE_ADDR(table->entries[i])));
+			}
+			*entry = 0;
+			tlb_invalidate(info->pml4, (void *)base);
+			page_decref(page);
+		}
+	}
+
+	*entry = page2pa(info->page) | info->flags | PAGE_PRESENT | PAGE_HUGE;
+
 	return 0;
 }
 
