@@ -72,7 +72,7 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *ptbl_page = page_alloc(ALLOC_ZERO);
 	ptbl_page->pp_ref++;
 	struct page_table *ptbl = page2kva(ptbl_page);
-	uint32_t flags = *entry & PAGE_UMASK;
+	uint64_t flags = *entry & PAGE_UMASK;
 
 	if (huge_page->pp_ref == 0 && huge_page->pp_free == 0) {
 		for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) ptbl->entries[i] = (page2pa(huge_page) + (i * PAGE_SIZE)) | flags;
@@ -125,7 +125,7 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *ptbl_page = pa2page(PAGE_ADDR(*entry));
 	struct page_table *ptbl = page2kva(ptbl_page);
 
-	uint32_t flags = ptbl->entries[0] & PAGE_UMASK;
+	uint64_t flags = ptbl->entries[0] & PAGE_UMASK;
 	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
 		if (!(ptbl->entries[i] & PAGE_PRESENT)) return 0;
 		if ((ptbl->entries[i] & PAGE_UMASK) != flags) return 0;
