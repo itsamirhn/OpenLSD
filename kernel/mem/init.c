@@ -75,7 +75,7 @@ int pml4_setup(struct boot_info *boot_info)
 	 * buddy_migrate().
 	 */
 
-	//  buddy_migrate();
+	 buddy_migrate();
 
 
 	return 0;
@@ -302,6 +302,29 @@ void page_init_ext(struct boot_info *boot_info)
 	 * Tip: can you find a way to speed this up for large amounts of memory?
 	 */
 	for (i = 0; i < boot_info->mmap_len; ++i, ++entry) {
-		/* LAB 2: your code here. */
+		if(entry->type != MMAP_FREE) {
+			continue;
+		}
+		for(pa = entry->addr; pa < entry->addr + entry->len; pa += PAGE_SIZE){
+			if(pa < BOOT_MAP_LIM) {
+				continue;
+			}
+			if(PAGE_INDEX(pa) >= npages) {
+				if(buddy_grow(kernel_pml4, PAGE_INDEX(pa)) < 0) {
+					panic("page_init_ext: buddy_grow failed");
+				}
+			}
+			page = pa2page(pa);
+			page->pp_avail = 1;
+			page->pp_ref = 0;
+			page->pp_free = 0;
+
+			#ifdef BONUS_INVALID_FREE
+				page->pp_order = 0;
+			#endif
+			
+			page_free(page);
+
+		}
 	}
 }
