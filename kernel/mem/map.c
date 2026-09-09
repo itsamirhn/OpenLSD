@@ -39,11 +39,10 @@ static int boot_map_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	if (hpage_aligned(info->pa) && info->base <= base && end <= info->end) {
 		*entry = info->pa | info->flags | PAGE_HUGE;
 		info->pa += HPAGE_SIZE;
-	} else {
-		ptbl_alloc(entry, base, end, walker);
+		return 0;
 	}
-
-	return 0;
+	
+	return ptbl_alloc(entry, base, end, walker);
 }
 
 /*
@@ -79,7 +78,7 @@ void boot_map_region(struct page_table *pml4, void *va, size_t size,
 		.udata = &info,
 	};
 
-	walk_page_range(pml4, va, (void *)((uintptr_t)va + size), &walker);
+	assert(walk_page_range(pml4, va, (void *)((uintptr_t)va + size), &walker) == 0);
 }
 
 

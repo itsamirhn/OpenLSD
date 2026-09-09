@@ -49,11 +49,10 @@ static int remove_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		*entry = 0;
 		tlb_invalidate(info->pml4, (void *)base);
 		page_decref(page);
-	} else {
-		ptbl_split(entry, base, end, walker);
+		return 0;
 	}
 	
-	return 0;
+	return ptbl_split(entry, base, end, walker);	
 }
 
 
@@ -74,7 +73,7 @@ void unmap_page_range(struct page_table *pml4, void *va, size_t size)
 		.udata = &info,
 	};
 
-	walk_page_range(pml4, va, va + size, &walker);
+	assert(walk_page_range(pml4, va, va + size, &walker) == 0);
 }
 
 /* Unmaps all user pages. */
