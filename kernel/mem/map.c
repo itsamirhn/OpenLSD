@@ -110,7 +110,7 @@ void boot_map_mmap(struct page_table *pml4, struct boot_info *boot_info) {
 				flags = PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC;
 				break;	
 			default:
-				flags = PAGE_PRESENT;
+				flags = PAGE_PRESENT | PAGE_NO_EXEC;
 				break;
 		}
 		boot_map_region(pml4, (void *)(KERNEL_VMA + entry->addr), entry->len, entry->addr, flags);
