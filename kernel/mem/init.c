@@ -159,7 +159,7 @@ void mem_init(struct boot_info *boot_info)
 	validate_pml4();
 
 	/* Load the kernel PML4. */
-	/* LAB 2: your code here. */
+	load_pml4(PADDR(kernel_pml4));
 
 	/* Add the rest of the physical memory to the buddy allocator. */
 	page_init_ext(boot_info);
