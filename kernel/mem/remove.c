@@ -86,5 +86,9 @@ void unmap_user_pages(struct page_table *pml4)
 /* Unmaps the physical page at the virtual address va. */
 void page_remove(struct page_table *pml4, void *va)
 {
-	/* LAB 2: your code here */
+	struct page_info *page = page_lookup(pml4, va, NULL);
+	if (page) {
+		if (page->pp_order == BUDDY_4K_PAGE) unmap_page_range(pml4, va, PAGE_SIZE);
+		else unmap_page_range(pml4, va, HPAGE_SIZE);
+	}
 }
