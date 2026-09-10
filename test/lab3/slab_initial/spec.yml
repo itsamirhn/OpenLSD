@@ -1,0 +1,5 @@
+name: Slab initialization
+description: Checks the initial state of the slab allocator
+points: 0.2
+
+required: true
