@@ -129,7 +129,9 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
 		if (!(ptbl->entries[i] & PAGE_PRESENT)) return 0;
 		if ((ptbl->entries[i] & PAGE_UMASK) != flags) return 0;
-		if (pa2page(PAGE_ADDR(ptbl->entries[i]))->pp_avail == 0) return 0;
+		struct page_info *p = pa2page(PAGE_ADDR(ptbl->entries[i]));
+		if (p->pp_avail == 0) return 0;
+		if (p->pp_order != BUDDY_4K_PAGE) return 0;
 	}
 
 	struct page_info *huge_page = page_alloc(ALLOC_ZERO | ALLOC_HUGE); if (huge_page == NULL) return -ENOMEM;
@@ -138,7 +140,7 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	*entry = page2pa(huge_page) | flags | PAGE_HUGE;
 	struct page_table *pml4 = walker ? *(struct page_table **)walker->udata : NULL; // remove_info, insert_info, boot_map_info all have it as first element
-	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {;
+	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
 		tlb_invalidate(pml4, (void *)(base + (i * PAGE_SIZE)));
 		page_decref(pa2page(PAGE_ADDR(ptbl->entries[i])));
 	}
