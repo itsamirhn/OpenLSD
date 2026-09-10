@@ -1,0 +1,9 @@
+name: Paging - Invalid Remove
+description: Removing an unmapped virtual address must be detected
+bonus: INVALID_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Removing an unmapped virtual address; this should panic'
+
+should_panic: true

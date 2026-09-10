@@ -1,0 +1,9 @@
+name: Paging - Read-Only Mapping
+description: Writing through a present read-only mapping must fault
+bonus: OUT_OF_BOUNDS
+points: 0.5
+
+matchlines:
+  - '[TEST] Writing through a read-only mapping; this should panic'
+
+should_panic: true

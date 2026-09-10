@@ -1,0 +1,9 @@
+name: Paging - Use After Unmap
+description: Accessing a virtual address after its mapping is removed must fault
+bonus: USE_AFTER_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Accessing a removed mapping; this should panic'
+
+should_panic: true

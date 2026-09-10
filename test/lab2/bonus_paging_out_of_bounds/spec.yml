@@ -1,0 +1,9 @@
+name: Paging - Out-of-Bounds Guard Page
+description: Accessing the page immediately after a one-page mapping must fault
+bonus: OUT_OF_BOUNDS
+points: 0.5
+
+matchlines:
+  - '[TEST] Accessing the unmapped guard page; this should panic'
+
+should_panic: true

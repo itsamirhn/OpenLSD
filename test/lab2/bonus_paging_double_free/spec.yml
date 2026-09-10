@@ -1,0 +1,9 @@
+name: Paging - Double Remove
+description: Removing the same virtual mapping twice must be detected
+bonus: DOUBLE_FREE
+points: 0.5
+
+matchlines:
+  - '[TEST] Removing the same virtual mapping twice; this should panic'
+
+should_panic: true
