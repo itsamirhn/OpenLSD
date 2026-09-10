@@ -69,7 +69,11 @@ _start:
 	 * is temporary as we will set up full paging in lab 2.
 	 */
 	movl %cr0, %eax
-	orl $CR0_PAGING, %eax
+	#if defined(BONUS_OUT_OF_BOUNDS)
+		orl $(CR0_PAGING | CR0_WP), %eax
+	#else
+		orl $(CR0_PAGING), %eax
+	#endif
 	movl %eax, %cr0
 
 	/* On x86 both segmentation and paging are supported as models of memory
@@ -159,4 +163,3 @@ pdpt:
 
 page_dir:
 	.skip PAGE_SIZE
-

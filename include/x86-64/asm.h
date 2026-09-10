@@ -1,6 +1,7 @@
 #pragma once
 
 #define CR0_PM     (1 << 0)
+#define CR0_WP     (1 << 16)
 #define CR0_PAGING (1 << 31)
 
 #define CR4_PAE  (1 << 5)
