@@ -62,7 +62,7 @@ static void tlb_invalidate_handler(struct probe_frame *frame)
 
 static int run_test()
 {
-	struct paging_info info;
+	struct paging_info info = {0};
 	struct page_info *page1, *page2;
 	size_t page1_refs_before, page2_refs_before;
 

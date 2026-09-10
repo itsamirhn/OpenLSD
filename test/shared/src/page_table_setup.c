@@ -101,7 +101,7 @@ int setup_pml4(struct page_table **pml4, struct paging_info *info)
 
 int setup_page_tables(struct page_table **pml4, uintptr_t va, enum page_level final_lvl, struct paging_info *info)
 {
-	struct paging_info _info;
+	struct paging_info _info = {0};
 
 	// Minimum level is pml4, so this always runs
 	if (setup_pml4(pml4, &_info) < 0) {

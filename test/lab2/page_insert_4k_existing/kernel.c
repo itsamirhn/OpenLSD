@@ -42,7 +42,7 @@ static uintptr_t entry_idx_to_va(size_t entry_idx)
 
 static int run_test()
 {
-	struct paging_info info;
+	struct paging_info info = {0};
 	struct page_info *page1, *page2;
 	size_t refs_before;
 	physaddr_t entry;
