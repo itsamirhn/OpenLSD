@@ -20,8 +20,8 @@ static int run_test() {
 	assert(page_insert_guarded(pml4, page, (void *)TEST_VA,
 		PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC | PAGE_HUGE) == 0);
 
-	mapped[PAGE_SIZE - 1] = 0xA5;
-	assert(mapped[PAGE_SIZE - 1] == 0xA5);
+	mapped[PAGE_SIZE - 1] = 0xDD;
+	assert(mapped[PAGE_SIZE - 1] == 0xDD);
 	
 	// these page_inserts should fail because of the guard pages
 	assert(page_insert_guarded(pml4, page, (void *)TEST_VA + PAGE_SIZE,
@@ -34,7 +34,7 @@ static int run_test() {
 		 PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC | PAGE_HUGE) < 0);
 
 	cprintf("[TEST] Accessing the unmapped guard page; this should panic\n");
-	*((volatile unsigned char *)(TEST_VA + PAGE_SIZE)) = 0x5A;
+	mapped[PAGE_SIZE] = 0xEE; // oops off by one
 	cprintf("[TEST] This did not panic!\n");
 
 

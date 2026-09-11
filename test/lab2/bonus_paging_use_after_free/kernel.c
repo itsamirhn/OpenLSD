@@ -19,13 +19,13 @@ static int run_test() {
 	assert(setup_page_tables(&pml4, TEST_VA, PTE, &info) == 0);
 	assert(page_insert(pml4, page, (void *)TEST_VA,
 		PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
-	stale[0] = 0xA5;
+	stale[0] = 0xAA;
 
 	page_remove(pml4, (void *)TEST_VA);
 	assert(page_lookup(pml4, (void *)TEST_VA, NULL) == NULL);
 
 	cprintf("[TEST] Accessing a removed mapping; this should panic\n");
-	stale[0] = 0x5A;
+	stale[0] = 0xBB;
 	cprintf("[TEST] This did not panic!\n");
 
 

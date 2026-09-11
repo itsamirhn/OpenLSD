@@ -86,8 +86,13 @@ void unmap_user_pages(struct page_table *pml4)
 void page_remove(struct page_table *pml4, void *va)
 {
 	struct page_info *page = page_lookup(pml4, va, NULL);
+	#ifdef BONUS_PAGING_INVALID_FREE
+		if(!page_aligned((uintptr_t) va)) {
+			panic("Invalid page removal at misaligned virtual address %p", va);
+		}
+	#endif
 	#if defined(BONUS_DOUBLE_FREE) || defined(BONUS_PAGING_INVALID_FREE)
-		if (!page || !page_aligned((uintptr_t) va)) {
+		if (!page) {
 			panic("Invalid page removal at virtual address %p", va);
 		}
 	#endif

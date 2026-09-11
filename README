@@ -2,6 +2,26 @@
 
 The use after free and the out of bounds tests rely on how the pages are mapped, which cause a page fault on their access. Because interrupts are scheduled for lab 3, these tests triple fault for now. And thus no kernel panic can be issued as the test framework requires. For that we put another cprintf() after the line that should page fault, if that gets printed means that the test failed as it did not page fault.
 
+## SANITY CHECKS
+### DOUBLE FREE and/or INVALID FREE
+##### MACRO = BONUS_DOUBLE_FREE || BONUS_PAGING_INVALID_FREE
+For these sanity features we do a page lookup, and if that fails, that means we free an invalid page or an already freed one. For invalid free we also check misaligned addresses. 
+
+## OUT_OF_BOUNDS
+##### MACRO = BONUS_OUT_OF_BOUNDS
+For this bonus we introduce the interface `
+int page_insert_guarded(struct page_table *pml4, struct page_info *page, void *va, uint64_t flags);`, that keeps adjacent guard pages unmapped. By keeping the adjacent pages unmapped, a page fault is going to be triggered by each out of bounds read/write. It was chosen for a new interface in order to not interfere with mostly how the buddy allocator works.
+
+The test tries to insert pages around allocated pages, and it fails because of the guard pages. At the end it tries an OOB write which it page faults on. As mentioned above the interrupts are not there yet, but this should count as a successful test.
+
+#### Write protect
+For this we set the WP bit on in the CR0 register, which raises a page fault on writes on read-only pages even from Ring 0. 
+The test tries to write to a read-only page and it page faults while trying it.
+
+
+## USE_AFTER_FREE
+##### MACRO = BONUS_USE_AFTER_FREE
+This is mostly just a test that checks that removed pages are actually unmapped and not anymore accessible. Thus in the end the test tries to write to the unaccessible and in response it triggers a page fault. (see above)
 
 ------------------------------------------------
 # Description of LAB 1 bonuses:

@@ -22,7 +22,7 @@ static int run_test() {
 	assert(page_lookup(pml4, (void *)TEST_VA, NULL) == page);
 
 	cprintf("[TEST] Writing through a read-only mapping; this should panic\n");
-	read_only[0] = 0xA5;
+	read_only[0] = 0xCC;
 	cprintf("[TEST] This did not panic!\n");
 
 
