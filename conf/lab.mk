@@ -18,7 +18,7 @@ LAB=2
 # "make test-all" or when submitting to Themis. Each of the bonus
 # features will be tested separately, in isolation, to prevent
 # interference between bonus features.
-BONUSES = DOUBLE_FREE INVALID_FREE USE_AFTER_FREE OUT_OF_BOUNDS
+BONUSES = DOUBLE_FREE PAGING_INVALID_FREE USE_AFTER_FREE OUT_OF_BOUNDS
 
 # The following setup can be used to specify custom configuration
 # settings for specific bonus features. For example, for the SMEP/

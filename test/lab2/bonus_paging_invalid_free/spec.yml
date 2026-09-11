@@ -1,6 +1,6 @@
 name: Paging - Invalid Remove
 description: Removing an unmapped virtual address must be detected
-bonus: INVALID_FREE
+bonus: PAGING_INVALID_FREE
 points: 0.5
 
 matchlines:
