@@ -25,6 +25,8 @@ static int run_test() {
 
 	cprintf("[TEST] Accessing the unmapped guard page; this should panic\n");
 	*((volatile unsigned char *)(TEST_VA + PAGE_SIZE)) = 0x5A;
+	cprintf("[TEST] This did not panic!\n");
+
 
 	return __checksum__;
 }

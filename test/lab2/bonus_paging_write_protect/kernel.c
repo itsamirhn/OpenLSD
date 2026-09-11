@@ -23,6 +23,8 @@ static int run_test() {
 
 	cprintf("[TEST] Writing through a read-only mapping; this should panic\n");
 	read_only[0] = 0xA5;
+	cprintf("[TEST] This did not panic!\n");
+
 
 	return __checksum__;
 }

@@ -26,6 +26,8 @@ static int run_test() {
 
 	cprintf("[TEST] Accessing a removed mapping; this should panic\n");
 	stale[0] = 0x5A;
+	cprintf("[TEST] This did not panic!\n");
+
 
 	return __checksum__;
 }
