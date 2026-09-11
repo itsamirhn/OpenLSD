@@ -134,3 +134,19 @@ int page_insert(struct page_table *pml4, struct page_info *page, void *va,
 	}
 	return -1;
 }
+
+#ifdef BONUS_OUT_OF_BOUNDS
+int page_insert_guarded(struct page_table *pml4, struct page_info *page, void *va,
+	uint64_t flags)
+{
+	if (page->pp_order == BUDDY_4K_PAGE) {
+		if (page_lookup(pml4, va - PAGE_SIZE, NULL)) return -1;
+		if (page_lookup(pml4, va + PAGE_SIZE, NULL)) return -1;
+	} else if (page->pp_order == BUDDY_2M_PAGE) {
+		if (page_lookup(pml4, va - PAGE_SIZE, NULL)) return -1;
+		if (page_lookup(pml4, va + HPAGE_SIZE, NULL)) return -1;
+	}
+
+	return page_insert(pml4, page, va, flags);
+}
+#endif
