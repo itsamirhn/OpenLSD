@@ -1,0 +1,3 @@
+name: Paging - THP Populate
+description: Ensures populate_region uses 4K pages for small ranges and a 2M transparent huge page when populating a full 2M range
+points: 0.5

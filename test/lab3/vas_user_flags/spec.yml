@@ -1,0 +1,5 @@
+name: Virtual Address Space - User Flags
+description: Checks that kernel pages do not have the user flag, and user pages do
+points: 0.3
+
+required: true

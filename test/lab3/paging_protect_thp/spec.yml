@@ -1,0 +1,3 @@
+name: Paging - THP Protect
+description: Checks that protect_region splits a 2M transparent huge page for per-4K permissions and can restore a 2M page when protections are unified again
+points: 0.5

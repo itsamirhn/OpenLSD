@@ -1,0 +1,5 @@
+name: Virtual Address Space - NULL
+description: Checks that the NULL address is not mapped
+points: 0.3
+
+required: true

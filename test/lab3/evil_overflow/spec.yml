@@ -1,0 +1,13 @@
+name: Evil - Overflow Print
+description: Trying to print too much data, beyond process limits
+points: 0.2
+
+required: true
+
+regexlines:
+  - '.PID     1. Access violation for va 0x8.....'
+  - '.PID     1. Freed task with PID 1'
+
+noregexlines:
+  - '\[PID     1\] Exiting gracefully with code .*'
+  - 'Hello, world!'

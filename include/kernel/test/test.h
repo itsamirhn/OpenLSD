@@ -20,4 +20,4 @@ struct test_definition {
 	struct probe probes[];
 };
 
-void tests_init();
+uint8_t *tests_init();
