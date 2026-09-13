@@ -66,7 +66,10 @@ void task_init(void)
 	/* Allocate an array of pointers at PIDMAP_BASE to be able to map PIDs
 	 * to tasks.
 	 */
-	/* LAB 3: your code here. */
+
+	size_t size = pid_max * sizeof(struct task *);
+	populate_region(kernel_pml4, (void *)PIDMAP_BASE, size, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
+	memset(tasks, 0, size);
 }
 
 /* Sets up the virtual address space for the task. */
@@ -87,7 +90,8 @@ static int task_setup_vas(struct task *task)
 	 * Can you use kernel_pml4 as a template?
 	 */
 
-	/* LAB 3: your code here. */
+	task->task_pml4 = page2kva(page);
+
 	return 0;
 }
 
