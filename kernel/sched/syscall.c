@@ -66,7 +66,7 @@ static int sys_kill(pid_t pid)
 
 static int sys_exit(int rcode)
 {
-	struct task *task;
+	struct task *task = NULL;
 
 	/* LAB 3: your code here */
 
