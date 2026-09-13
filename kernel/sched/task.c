@@ -230,7 +230,13 @@ static void task_load_elf(struct task *task, uint8_t *binary)
  */
 void task_create(uint8_t *binary, enum task_type type)
 {
-	/* LAB 3: your code here. */
+	struct task *task = task_alloc(0);
+
+	task->task_type = type;
+	task_load_elf(task, binary);
+	
+	if (type == TASK_TYPE_USER) nuser_tasks++;
+	
 }
 
 /* Free the task and all of the memory that is used by it.
