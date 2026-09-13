@@ -91,7 +91,9 @@ static int task_setup_vas(struct task *task)
 	 */
 
 	task->task_pml4 = page2kva(page);
-	memcpy(task->task_pml4, kernel_pml4, PAGE_SIZE);
+	
+	// Just copy the kernel space mapping and leave the user space mapping empty
+	for (size_t i = PML4_INDEX(KERNEL_VMA); i < PAGE_TABLE_ENTRIES; i++) task->task_pml4->entries[i] = kernel_pml4->entries[i];
 
 	return 0;
 }
