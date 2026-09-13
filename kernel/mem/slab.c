@@ -74,7 +74,8 @@ int slab_alloc_chunk(struct slab *slab)
  */
 void slab_free_chunk(struct slab *slab, struct slab_info *info)
 {
-	/* LAB 3: your code here. */
+	list_del(&info->node);
+	page_decref(pa2page(PADDR((char *)info - slab->info_off)));
 }
 
 /* Initializes a slab allocator for the given object size as follows:
