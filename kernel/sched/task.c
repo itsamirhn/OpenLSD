@@ -91,6 +91,7 @@ static int task_setup_vas(struct task *task)
 	 */
 
 	task->task_pml4 = page2kva(page);
+	memcpy(task->task_pml4, kernel_pml4, PAGE_SIZE);
 
 	return 0;
 }
