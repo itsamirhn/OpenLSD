@@ -323,12 +323,14 @@ void task_run(struct task *task)
 	 *  and make sure you have set the relevant parts of
 	 *  e->task_frame to sensible values.
 	 */
-
-	/* LAB 3: Your code here. */
-	panic("task_run() not yet implemented");
-
-
-
+	if (cur_task != task) {	
+		if (cur_task && cur_task->task_status == TASK_RUNNING) cur_task->task_status = TASK_RUNNABLE;
+		cur_task = task;
+		cur_task->task_status = TASK_RUNNING;
+		cur_task->task_runs++;
+		load_pml4(PADDR(cur_task->task_pml4));
+	}
+	task_pop_frame(&cur_task->task_frame);
 }
 
 /*
