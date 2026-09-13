@@ -6,6 +6,7 @@
 #include <kernel/mem.h>
 
 struct populate_info {
+	struct page_table *pml4;
 	uint64_t flags;
 	uintptr_t base, end;
 };
@@ -51,6 +52,7 @@ void populate_region(struct page_table *pml4, void *va, size_t size,
 	uint64_t flags)
 {
 	struct populate_info info = {
+		.pml4 = pml4,
 		.flags = flags,
 		.base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE),
 		.end = ROUNDUP((uintptr_t)va + size, PAGE_SIZE) - 1,
@@ -60,6 +62,7 @@ void populate_region(struct page_table *pml4, void *va, size_t size,
 		.pde_callback = populate_pde,
 		.pdpte_callback = ptbl_alloc,
 		.pml4e_callback = ptbl_alloc,
+		.pde_unmap = ptbl_merge,
 		.udata = &info,
 	};
 
