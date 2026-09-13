@@ -3,6 +3,7 @@
 #include <list.h>
 #include <paging.h>
 #include <string.h>
+#include <error.h>
 
 #include <kernel/mem.h>
 #include <kernel/mem/slab.h>
@@ -46,8 +47,25 @@ int slab_alloc_chunk(struct slab *slab)
 	struct slab_obj *obj;
 	char *base;
 	size_t i;
+	
+	page = page_alloc(ALLOC_ZERO);
+	if (page == NULL) return -ENOMEM;
 
-	/* LAB 3: your code here. */
+	page->pp_ref++;
+	base = page2kva(page);
+	info = (struct slab_info *)(base + slab->info_off);
+	info->slab = slab;
+
+	list_init(&info->free_list);
+	info->free_count = slab->count;
+	for (i = 0; i < slab->count; i++) {
+		obj = (struct slab_obj *)(base + i * slab->obj_size);
+		obj->info = info;
+		list_add(&info->free_list, &obj->node);
+	}
+
+	list_add(&slab->partial, &info->node);
+
 	return 0;
 }
 
