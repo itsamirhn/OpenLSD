@@ -91,7 +91,7 @@ static int task_setup_vas(struct task *task)
 	 */
 
 	task->task_pml4 = page2kva(page);
-	
+
 	// Just copy the kernel space mapping and leave the user space mapping empty
 	for (size_t i = PML4_INDEX(KERNEL_VMA); i < PAGE_TABLE_ENTRIES; i++) task->task_pml4->entries[i] = kernel_pml4->entries[i];
 
@@ -194,15 +194,31 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 	 * make sure that the task starts executing there.
 	 */
 
-	/* LAB 3: your code here. */
+	struct elf *elf_hdr = (struct elf *)binary;
+	assert(elf_hdr->e_magic == ELF_MAGIC);
+
+	struct elf_proghdr *prog_hdr = (struct elf_proghdr *)((char *)elf_hdr + elf_hdr->e_phoff);
+	
+	load_pml4(PADDR(task->task_pml4));
+	task->task_frame.rip = elf_hdr->e_entry;
+	for (size_t i = 0; i < elf_hdr->e_phnum; i++, prog_hdr++) {
+		if (prog_hdr->p_type != ELF_PROG_LOAD) continue;
+
+		populate_region(task->task_pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
+		memcpy((void *)prog_hdr->p_va, binary + prog_hdr->p_offset, prog_hdr->p_filesz);
+		memset((void *)(prog_hdr->p_va + prog_hdr->p_filesz), 0, prog_hdr->p_memsz - prog_hdr->p_filesz);
+
+		uint64_t flags = PAGE_PRESENT | PAGE_USER;
+		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) flags |= PAGE_WRITE;
+		if (!(prog_hdr->p_flags & ELF_PROG_FLAG_EXEC)) flags |= PAGE_NO_EXEC;
+		protect_region(task->task_pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz, flags);
+	}
 
 	/* Now map one page for the program's initial stack at virtual address
 	 * USTACK_TOP - PAGE_SIZE.
 	 */
-
-	/* LAB 3: your code here. */
-
-
+	populate_region(task->task_pml4, (void *)(USTACK_TOP - PAGE_SIZE), PAGE_SIZE, PAGE_PRESENT | PAGE_USER | PAGE_WRITE | PAGE_NO_EXEC);
+	load_pml4(PADDR(kernel_pml4));
 }
 
 /* Allocates a new task with task_alloc(), loads the named ELF binary using
