@@ -34,7 +34,7 @@ uint8_t *find_user_binary() {
 	char *user_binary_symbol_name = kmalloc(ret + 24); // 24 bytes for "_binary_obj_user_" and "_start" + \0
 	snprintf(user_binary_symbol_name, ret + 24, "_binary_obj_user_%s_start", user_binary_name);
 
-	uint8_t *binary = find_symbol(user_binary_symbol_name, ELF_SYM_TYPE_FUNC);
+	uint8_t *binary = find_symbol(user_binary_symbol_name, ELF_SYM_TYPE_ANY);
 	if(binary == NULL)
 		panic("Could not load user binary with name: %s\n", user_binary_name);
 
