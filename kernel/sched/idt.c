@@ -13,7 +13,6 @@
 #include <kernel/sched/task.h>
 
 
-/* LAB 3: your code here. */
 
 #define DECL_ISR(int_no) extern void isr##int_no(void)
 
@@ -36,6 +35,8 @@ DECL_ISR(17);
 DECL_ISR(18);
 DECL_ISR(19);
 DECL_ISR(30);
+DECL_ISR(127);
+DECL_ISR(128);
 
 static const char *int_names[256] = {
 	[INT_DIVIDE] = "Divide-by-Zero Error Exception (#DE)",
@@ -174,6 +175,10 @@ void idt_init(void)
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[INT_SECURITY], isr30,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_PANIC], isr127,
+		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
+	set_idt_entry(&entries[INT_SYSCALL], isr128,
+		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	load_idt(&idtr);
 }
 
@@ -200,7 +205,6 @@ void int_dispatch(struct int_frame *frame)
 			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
 				frame->rdx, frame->r10, frame->r8, frame->r9);
 			return;
-		/* LAB 3: your code here. */
 		default: break;
 	}
 
@@ -256,9 +260,13 @@ void page_fault_handler(struct int_frame *frame)
 	fault_va = (void *)read_cr2();
 
 
-
+	// assert_user_mem(cur_task, fault_va, 1, PROT_READ);
 	/* Handle kernel-mode page faults. */
-	/* LAB 3: your code here. */
+	if (fault_va >= (void *)KERNEL_VMA) {
+		// return;
+		// print_int_frame(frame);
+		// panic("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
+	}
 
 	/* We have already handled kernel-mode exceptions, so if we get here, the
 	 * page fault has happened in user mode.

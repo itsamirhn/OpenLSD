@@ -28,7 +28,8 @@ static void sys_cputs(const char *s, size_t len)
 {
 	/* Check that the user has permission to read memory [s, s+len).
 	 * Destroy the environment if not. */
-	/* LAB 3: your code here. */
+	assert_user_mem(cur_task, (void *)s, len, PROT_READ);
+
 	/* Print the string supplied by the user. */
 	cprintf("%.*s", len, s);
 }
@@ -66,10 +67,7 @@ static int sys_kill(pid_t pid)
 
 static int sys_exit(int rcode)
 {
-	struct task *task = NULL;
-
-	/* LAB 3: your code here */
-
+	struct task *task = cur_task;
 
 	cprintf("[PID %5u] Exiting gracefully with code %d\n", task->task_pid, rcode);
 

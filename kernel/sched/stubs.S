@@ -46,6 +46,8 @@ ISR_ERRCODE   17
 ISR_NOERRCODE 18
 ISR_NOERRCODE 19
 ISR_ERRCODE   30
+ISR_NOERRCODE 127
+ISR_NOERRCODE 128
 
 isr_common_stub:
 	/* Save the register state on the stack. */

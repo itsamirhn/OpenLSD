@@ -14,9 +14,8 @@ static int check_user_hole(uintptr_t base, uintptr_t end,
 	struct page_walker *walker)
 {
 	struct user_info *info = walker->udata;
-
-	/* LAB 3: your code here. */
-	return 0;
+	info->va = base;
+	return -1;
 }
 
 static int check_user_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
@@ -24,7 +23,11 @@ static int check_user_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct user_info *info = walker->udata;
 
-	/* LAB 3: your code here. */
+	if ((*entry & info->flags) != info->flags) {
+		info->va = base;
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -33,7 +36,13 @@ static int check_user_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct user_info *info = walker->udata;
 
-	/* LAB 3: your code here. */
+	if (!(*entry & PAGE_HUGE)){
+		return 0;
+	}else if ((*entry & info->flags) != info->flags) {
+		info->va = base;
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -47,7 +56,9 @@ static int check_user_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 int check_user_mem(uintptr_t *fault_va, struct page_table *pml4, void *va,
 	size_t size, uint64_t flags)
 {
+
 	struct user_info info = {
+		.va = (uintptr_t)va,
 		.flags = flags | PAGE_PRESENT | PAGE_USER,
 	};
 	struct page_walker walker = {
@@ -58,8 +69,7 @@ int check_user_mem(uintptr_t *fault_va, struct page_table *pml4, void *va,
 	};
 	int ret;
 
-	ret = walk_page_range(pml4, va, (void *)((uintptr_t)va + size),
-		&walker);
+	ret = walk_page_range(pml4, va, va + size, &walker);
 
 	*fault_va = info.va;
 
