@@ -25,7 +25,6 @@ isr\int_no:
 	jmp isr_common_stub
 .endm
 
-/* LAB 3: your code here. */
 
 ISR_NOERRCODE 0
 ISR_NOERRCODE 1
@@ -82,12 +81,44 @@ isr_common_stub:
 
 .global syscall64
 syscall64:
-	/* LAB 3: your bonus code here. */
+#ifdef BONUS_SYSCALL
+	swapgs
 	/* Store the userspace stack pointer in the per-cpu struct. */
+	movq %rsp, %gs:CPU_TSS_RSP3
+	movq %r12, %gs:CPU_TSS_RSP2
 
 	/* Load the kernel stack pointer from the per-cpu struct. */
+	movq %gs:CPU_TSS_RSP0, %rsp
 
-	/* Store the register state into the per-cpu struct. */
+	/* Store the register state into the per-cpu struct. */ 
+	movq %gs:CPU_TASK, %r12
+	movq $GDT_UDATA | 3, 0(%r12)
+
+	movq %r15, 8(%r12)
+	movq %r14, 16(%r12)
+	movq %r13, 24(%r12)
+	movq %gs:CPU_TSS_RSP2, %r13
+
+	movq %r13, 32(%r12)
+	movq %r11, 40(%r12)
+	movq %r10, 48(%r12)
+	movq %r9, 56(%r12)
+	movq %r8, 64(%r12)
+	movq %rdi, 72(%r12)
+	movq %rsi, 80(%r12)
+	movq %rbp, 88(%r12)
+	movq %rbx, 96(%r12)
+	movq %rdx, 104(%r12)
+	movq %rcx, 112(%r12)
+	movq %rax, 120(%r12)
+	movq $0x80, 128(%r12)
+	movq $0, 136(%r12)
+	movq %rcx, 144(%r12)
+	movq $GDT_UCODE | 3, 152(%r12)
+	movq %r11, 160(%r12)
+	movq %gs:CPU_TSS_RSP3, %rax
+	movq %rax, 168(%r12)
+	movq $GDT_UDATA | 3, 176(%r12)
 
 	/* Jump to the system call handler. This is implemented as a normal function
 	 * that expects the syscall number as its seventh argument, so we push the
@@ -95,9 +126,11 @@ syscall64:
 	 * a dummy return address.
 	 */
 	movq %r10, %rcx
+	movq 120(%r12), %rax
 	pushq %rax
 	pushq $0
 	jmp syscall_handler
+#endif
 
 .global iret64
 iret64:
@@ -129,7 +162,25 @@ iret64:
 
 .global sysret64
 sysret64:
-	/* LAB 3: your bonus code here. */
+#ifdef BONUS_SYSCALL
 	/* Recover the register state. */
+	movq 8(%rdi), %r15
+	movq 16(%rdi), %r14
+	movq 24(%rdi), %r13
+	movq 32(%rdi), %r12
+	movq 40(%rdi), %r11
+	movq 48(%rdi), %r10
+	movq 56(%rdi), %r9
+	movq 64(%rdi), %r8
+	movq 80(%rdi), %rsi
+	movq 88(%rdi), %rbp
+	movq 96(%rdi), %rbx
+	movq 104(%rdi), %rdx
+	movq 120(%rdi), %rax
+	movq 144(%rdi), %rcx
+	movq 168(%rdi), %rsp
+	movq 72(%rdi), %rdi
+	swapgs
 	/* Return from the system call. */
 	sysretq
+#endif
