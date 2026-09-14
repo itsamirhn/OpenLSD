@@ -57,8 +57,27 @@ syscall64:
 
 .global iret64
 iret64:
-	/* LAB 3: your code here. */
 	/* Restore the register state. */
+	movq %rdi, %rsp
+
+	popq %rax // ds
+	movw %ax, %ds
+
+	popq %r15
+	popq %r14
+	popq %r13
+	popq %r12
+	popq %r11
+	popq %r10
+	popq %r9
+	popq %r8
+	popq %rdi
+	popq %rsi
+	popq %rbp
+	popq %rbx
+	popq %rdx
+	popq %rcx
+	popq %rax
 
 	/* Return from the interrupt. */
 	addq $16, %rsp
