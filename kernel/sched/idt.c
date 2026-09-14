@@ -260,12 +260,11 @@ void page_fault_handler(struct int_frame *frame)
 	fault_va = (void *)read_cr2();
 
 
-	// assert_user_mem(cur_task, fault_va, 1, PROT_READ);
 	/* Handle kernel-mode page faults. */
-	if (fault_va >= (void *)KERNEL_VMA) {
-		// return;
-		// print_int_frame(frame);
-		// panic("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
+	if ((frame->cs & 3) == 0) {
+		cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
+		print_int_frame(frame);
+		panic("Kernel page fault");
 	}
 
 	/* We have already handled kernel-mode exceptions, so if we get here, the
