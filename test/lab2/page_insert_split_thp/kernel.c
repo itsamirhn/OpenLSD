@@ -121,7 +121,7 @@ static int run_test()
 
 	/* Allocate the huge page that will be split */
 	huge_page = page_alloc(ALLOC_HUGE);
-	huge_page->pp_ref++;
+	huge_page->pp_ref += 2;
 
 	// Allocate a second 4k page to insert into the huge page
 	new_page = page_alloc(ALLOC_ZERO);
