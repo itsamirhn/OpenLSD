@@ -88,10 +88,19 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 	 * Call the function corresponding to the 'syscallno' parameter.
 	 * Return any appropriate return value.
 	 */
-	/* LAB 3: your code here. */
-	panic("syscall not implemented");
 
 	switch (syscallno) {
+		case SYS_cputs:
+			sys_cputs((const char *)a1, (size_t)a2);
+			return 0;
+		case SYS_cgetc:
+			return sys_cgetc();
+		case SYS_getpid:
+			return sys_getpid();
+		case SYS_kill:
+			return sys_kill((pid_t)a1);
+		case SYS_exit:
+			return sys_exit((int)a1);
 		default:
 			return -ENOSYS;
 	}

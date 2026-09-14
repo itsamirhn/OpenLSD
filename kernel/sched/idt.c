@@ -15,6 +15,28 @@
 
 /* LAB 3: your code here. */
 
+#define DECL_ISR(int_no) extern void isr##int_no(void)
+
+DECL_ISR(0);
+DECL_ISR(1);
+DECL_ISR(2);
+DECL_ISR(3);
+DECL_ISR(4);
+DECL_ISR(5);
+DECL_ISR(6);
+DECL_ISR(7);
+DECL_ISR(8);
+DECL_ISR(10);
+DECL_ISR(11);
+DECL_ISR(12);
+DECL_ISR(13);
+DECL_ISR(14);
+DECL_ISR(16);
+DECL_ISR(17);
+DECL_ISR(18);
+DECL_ISR(19);
+DECL_ISR(30);
+
 static const char *int_names[256] = {
 	[INT_DIVIDE] = "Divide-by-Zero Error Exception (#DE)",
 	[INT_DEBUG] = "Debug (#DB)",
@@ -113,7 +135,45 @@ void print_int_frame(struct int_frame *frame)
 /* Set up the interrupt handlers. */
 void idt_init(void)
 {
-	/* LAB 3: your code here. */
+	set_idt_entry(&entries[INT_DIVIDE], isr0,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_DEBUG], isr1,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_NMI], isr2,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_BREAK], isr3,
+		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3),
+		GDT_KCODE);
+	set_idt_entry(&entries[INT_OVERFLOW], isr4,
+		IDT_TRAP_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_BOUND], isr5,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_INVALID_OP], isr6,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_DEVICE], isr7,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_DOUBLE_FAULT], isr8,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_TSS], isr10,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_NO_SEG_PRESENT], isr11,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_SS], isr12,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_GPF], isr13,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_PAGE_FAULT], isr14,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_FPU], isr16,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_ALIGNMENT], isr17,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_MCE], isr18,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_SIMD], isr19,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[INT_SECURITY], isr30,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	load_idt(&idtr);
 }
 
@@ -127,6 +187,19 @@ void int_dispatch(struct int_frame *frame)
 	 *  - Dispatch system calls to syscall().
 	 */
 	switch (frame->int_no) {
+		case INT_BREAK:
+			monitor(frame);
+			return;
+		case INT_PANIC:
+			halt_kernel();
+			return;
+		case INT_PAGE_FAULT:
+			page_fault_handler(frame);
+			return;
+		case INT_SYSCALL:
+			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
+				frame->rdx, frame->r10, frame->r8, frame->r9);
+			return;
 		/* LAB 3: your code here. */
 		default: break;
 	}

@@ -27,6 +27,26 @@ isr\int_no:
 
 /* LAB 3: your code here. */
 
+ISR_NOERRCODE 0
+ISR_NOERRCODE 1
+ISR_NOERRCODE 2
+ISR_NOERRCODE 3
+ISR_NOERRCODE 4
+ISR_NOERRCODE 5
+ISR_NOERRCODE 6
+ISR_NOERRCODE 7
+ISR_ERRCODE   8
+ISR_ERRCODE   10
+ISR_ERRCODE   11
+ISR_ERRCODE   12
+ISR_ERRCODE   13
+ISR_ERRCODE   14
+ISR_NOERRCODE 16
+ISR_ERRCODE   17
+ISR_NOERRCODE 18
+ISR_NOERRCODE 19
+ISR_ERRCODE   30
+
 isr_common_stub:
 	/* Save the register state on the stack. */
 	/* Recover the segments. */
@@ -52,6 +72,7 @@ isr_common_stub:
 
 	movw $GDT_KDATA, %ax
 	movw %ax, %ds
+	movw %ax, %es
 
 	/* Jump to the generic interrupt handler. */
 	movq %rsp, %rdi
