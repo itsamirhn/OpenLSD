@@ -28,9 +28,30 @@ isr\int_no:
 /* LAB 3: your code here. */
 
 isr_common_stub:
-	/* LAB 3: your code here. */
 	/* Save the register state on the stack. */
 	/* Recover the segments. */
+	pushq %rax
+	pushq %rcx
+	pushq %rdx
+	pushq %rbx
+	pushq %rbp
+	pushq %rsi
+	pushq %rdi
+	pushq %r8
+	pushq %r9
+	pushq %r10
+	pushq %r11
+	pushq %r12
+	pushq %r13
+	pushq %r14
+	pushq %r15
+
+	xorq %rax, %rax
+	movq %ds, %rax
+	pushq %rax /* ds */
+
+	movw $GDT_KDATA, %ax
+	movw %ax, %ds
 
 	/* Jump to the generic interrupt handler. */
 	movq %rsp, %rdi
