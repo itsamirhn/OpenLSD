@@ -4,8 +4,9 @@ points: 1
 
 bonus: ASLR
 
-matchlines:
-  - '[PID     1] Exiting gracefully with code 0'
+should_panic: true
 
 regexlines:
   - '\[ASLR\] foo at 0x[0-9a-f]{7,}'
+  - '\[ASLR\] puts at 0x[0-9a-f]{7,}'
+  - '\[PID     1\] user panic in <unknown> at test/lab3/bonus_aslr/user.c:'
