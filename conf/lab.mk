@@ -18,7 +18,7 @@ LAB=3
 # "make test-all" or when submitting to Themis. Each of the bonus
 # features will be tested separately, in isolation, to prevent
 # interference between bonus features.
-BONUSES = SYSCALL #DOUBLE_FREE PAGING_INVALID_FREE USE_AFTER_FREE OUT_OF_BOUNDS
+BONUSES = BONUS_SMEP_SMAP #SYSCALL DOUBLE_FREE PAGING_INVALID_FREE USE_AFTER_FREE OUT_OF_BOUNDS
 
 # The following setup can be used to specify custom configuration
 # settings for specific bonus features. For example, for the SMEP/
@@ -30,6 +30,6 @@ BONUSES = SYSCALL #DOUBLE_FREE PAGING_INVALID_FREE USE_AFTER_FREE OUT_OF_BOUNDS
 ## CFLAGS   - For additional compilation parameters
 # Make sure to use "+=" to not override any other settings.
 #
-# ifneq ($(filter FOO,$(BONUS)),)
-# QEMUOPTS += ...
-# endif
+ifneq ($(filter SMEP_SMAP,$(BONUS)),)
+QEMUOPTS += -cpu qemu64,+smep,+smap
+endif

@@ -86,6 +86,12 @@ int pml4_setup(struct boot_info *boot_info)
 // during testing.
 void validate_pml4() {}
 
+void enable_smep_smap()
+{
+	uint32_t cr4 = read_cr4();
+	cr4 |= CR4_SMEP | CR4_SMAP;
+	write_cr4(cr4);
+}
 
 /*
  * Set up a four-level page table:
@@ -163,6 +169,10 @@ void mem_init(struct boot_info *boot_info)
 
 	/* Add the rest of the physical memory to the buddy allocator. */
 	page_init_ext(boot_info);
+
+	#if defined(BONUS_SMEP_SMAP)
+	enable_smep_smap();
+	#endif
 }
 
 
