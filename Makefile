@@ -187,9 +187,14 @@ USER_CFLAGS += -DUSE_CLANG                # Probably unused
 USER_CFLAGS += -DOpenLSD_USER
 
 # Linker flags
-USER_LDFLAGS := -n                   # Specific output format
-USER_LDFLAGS += -nostdlib            # We bring our own library
+USER_LDFLAGS := -nostdlib            # We bring our own library
+
+ifneq ($(filter ASLR,$(BONUS)),)
+USER_LDFLAGS += -pie
+else
+USER_LDFLAGS += -n                   # Specific output format
 USER_LDFLAGS += -Tuser/user.ld       # Use custom linker script
+endif
 
 
 ###############################
