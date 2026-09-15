@@ -157,6 +157,33 @@ struct task *task_alloc(pid_t ppid)
 	return task;
 }
 
+#ifdef BONUS_ASLR
+
+#define ASLR_CODE_MIN    0x1000000 // lowest address for code
+#define ASLR_CODE_SLOTS  (1 << 4)
+#define ASLR_STACK_SLOTS (1 << 4)
+
+static void task_relocate_elf(struct elf *elf_hdr, uintptr_t base) {
+	
+	struct elf_proghdr *prog_hdr = (struct elf_proghdr *)((char *)elf_hdr + elf_hdr->e_phoff);
+	struct elf_dyn *dyn;
+	struct elf_rela *rela;
+	size_t rela_size = 0;
+
+	for (size_t i = 0; i < elf_hdr->e_phnum; i++) 
+		if (prog_hdr[i].p_type == ELF_PROG_DYNAMIC) 
+			dyn = (struct elf_dyn *)(base + prog_hdr[i].p_va);
+
+	for (; dyn->d_tag != ELF_DYN_NULL; dyn++)
+		if (dyn->d_tag == ELF_DYN_RELA) rela = (struct elf_rela *)(base + dyn->d_val);
+		else if (dyn->d_tag == ELF_DYN_RELASZ) rela_size = dyn->d_val;
+
+	for (size_t i = 0; i < rela_size / sizeof *rela; i++)
+		if (ELF_RELA_TYPE(rela[i].r_info) == ELF_RELOC_X86_64_RELATIVE)
+			*(uint64_t *)(base + rela[i].r_offset) = base + rela[i].r_addend;
+}
+#endif
+
 /* Sets up the initial program binary, stack and processor flags for a user
  * process.
  * This function is ONLY called during kernel initialization, before running
@@ -199,25 +226,45 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 
 	struct elf_proghdr *prog_hdr = (struct elf_proghdr *)((char *)elf_hdr + elf_hdr->e_phoff);
 	
+	uintptr_t code_base = 0;
+	uintptr_t stack_top = USTACK_TOP;
+
+	#ifdef BONUS_ASLR
+		if (elf_hdr->e_type == ELF_TYPE_DYN) code_base = ASLR_CODE_MIN + (read_tsc() % ASLR_CODE_SLOTS) * PAGE_SIZE;
+		stack_top = USTACK_TOP - (read_tsc() % ASLR_STACK_SLOTS) * PAGE_SIZE;
+	#endif
+
 	load_pml4(PADDR(task->task_pml4));
-	task->task_frame.rip = elf_hdr->e_entry;
+
 	for (size_t i = 0; i < elf_hdr->e_phnum; i++, prog_hdr++) {
 		if (prog_hdr->p_type != ELF_PROG_LOAD) continue;
 
-		populate_region(task->task_pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
-		memcpy((void *)prog_hdr->p_va, binary + prog_hdr->p_offset, prog_hdr->p_filesz);
-		memset((void *)(prog_hdr->p_va + prog_hdr->p_filesz), 0, prog_hdr->p_memsz - prog_hdr->p_filesz);
+		uintptr_t va = code_base + prog_hdr->p_va;
+
+		populate_region(task->task_pml4, (void *)va, prog_hdr->p_memsz, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
+		memcpy((void *)va, binary + prog_hdr->p_offset, prog_hdr->p_filesz);
+		memset((void *)(va + prog_hdr->p_filesz), 0, prog_hdr->p_memsz - prog_hdr->p_filesz);
 
 		uint64_t flags = PAGE_PRESENT | PAGE_USER;
 		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) flags |= PAGE_WRITE;
 		if (!(prog_hdr->p_flags & ELF_PROG_FLAG_EXEC)) flags |= PAGE_NO_EXEC;
-		protect_region(task->task_pml4, (void *)prog_hdr->p_va, prog_hdr->p_memsz, flags);
+		protect_region(task->task_pml4, (void *)va, prog_hdr->p_memsz, flags);
 	}
 
+	#ifdef BONUS_ASLR
+		if (elf_hdr->e_type == ELF_TYPE_DYN) {
+			task_relocate_elf(elf_hdr, code_base);
+			task->task_frame.rbx = code_base;
+		}
+		task->task_frame.rsp = stack_top;
+		cprintf("[PID %5u][ASLR] image at %p, stack at %p\n", task->task_pid, code_base, stack_top);
+	#endif
+	task->task_frame.rip = code_base + elf_hdr->e_entry;
+
 	/* Now map one page for the program's initial stack at virtual address
-	 * USTACK_TOP - PAGE_SIZE.
+	 * stack_top - PAGE_SIZE.
 	 */
-	populate_region(task->task_pml4, (void *)(USTACK_TOP - PAGE_SIZE), PAGE_SIZE, PAGE_PRESENT | PAGE_USER | PAGE_WRITE | PAGE_NO_EXEC);
+	populate_region(task->task_pml4, (void *)(stack_top - PAGE_SIZE), PAGE_SIZE, PAGE_PRESENT | PAGE_USER | PAGE_WRITE | PAGE_NO_EXEC);
 	load_pml4(PADDR(kernel_pml4));
 }
 

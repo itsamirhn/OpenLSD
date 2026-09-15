@@ -101,3 +101,21 @@ struct elf_sym {
 
 /* Flags for elf_sym::st_other */
 #define ELF_SYM_VISIBILITY(other) ((other) & 0x3)
+
+#ifdef BONUS_ASLR
+
+#define ELF_TYPE_DYN 3
+#define ELF_PROG_DYNAMIC 2
+#define ELF_DYN_RELA   7
+#define ELF_DYN_RELASZ 8
+
+struct elf_rela {
+	uint64_t r_offset;
+	uint64_t r_info;
+	int64_t  r_addend;
+};
+
+#define ELF_RELA_TYPE(info) ((uint32_t)(info)) // The lower 32 bits of r_info is the type
+#define ELF_RELOC_X86_64_RELATIVE 8
+
+#endif
