@@ -34,14 +34,29 @@ void syscall_init(void)
  * The string is exactly 'len' characters long.
  * Destroys the environment on memory errors.
  */
+
+static inline void copy_from_user(void *dst, const void *src, size_t len)
+{
+	asm volatile("stac");
+	memcpy(dst, src, len);
+	asm volatile("clac");
+}
+
 static void sys_cputs(const char *s, size_t len)
 {
 	/* Check that the user has permission to read memory [s, s+len).
 	 * Destroy the environment if not. */
 	assert_user_mem(cur_task, (void *)s, len, PROT_READ);
+	#ifdef BONUS_SMEP_SMAP
+		asm volatile("stac"); // seperate buffer seems a bit too much right now and it should be safe-ish
+	#endif
 
 	/* Print the string supplied by the user. */
 	cprintf("%.*s", len, s);
+
+	#ifdef BONUS_SMEP_SMAP
+		asm volatile("clac");
+	#endif
 }
 
 /*
