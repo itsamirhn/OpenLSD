@@ -1,0 +1,15 @@
+name: SMAP - Read from User Stack
+description: Try to read from user space stack.  
+points: 0.2
+
+BONUS: SMEP_SMAP
+should_panic: true
+
+matchlines:
+  - '[PID     0] New task with PID 1'
+  - '[TEST] Accessing user-space memory, this should page fault under SMAP'
+
+regexlines:
+  - 'INT frame at 0xf.......'
+  - ' INT 14: Page Fault (#PF)'
+  - ' CS  0x0008             DS  0x0010             SS  0x0010'
