@@ -16,3 +16,6 @@ KERNEL_SRCFILES += \
 KERNEL_BINFILES += \
 	user/hello
 
+ifneq ($(filter ASLR,$(BONUS)),)
+KERNEL_BINFILES += user/aslr
+endif
