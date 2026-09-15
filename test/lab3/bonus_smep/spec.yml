@@ -1,0 +1,18 @@
+name: SMEP - Execute User
+description: Try to execute user space code.  
+points: 0.2
+
+BONUS: SMEP_SMAP
+should_panic: true
+
+matchlines:
+  - '[PID     0] New task with PID 1'
+  - 'Kernel page fault at va 0x800052 ip 0x800052'
+
+noregexlines:
+  - 'Kernel page fault at va 0x7fffffff....'
+  
+# regexlines:
+#   - 'INT frame at 0xf.......'
+#   - ' INT 14: Page Fault (#PF)'
+#   - ' CS  0x0008             DS  0x0010             SS  0x0010'
