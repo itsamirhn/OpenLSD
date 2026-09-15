@@ -124,6 +124,16 @@ static inline uintptr_t read_cr3(void)
 	return value;
 }
 
+static inline void stac(void)
+{
+	asm volatile("stac");
+}
+
+static inline void clac(void)
+{
+	asm volatile("clac");
+}
+
 static inline void write_cr3(uintptr_t value)
 {
 	asm volatile("movq %0, %%cr3\n" :: "r" (value));
