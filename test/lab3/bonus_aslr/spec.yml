@@ -1,0 +1,11 @@
+name: ASLR - Randomised Code and Stack
+description: Fails unless a user binary is relocated and loaded at a randomised address, which is the only way its code lands above 16 MiB.
+points: 1
+
+bonus: ASLR
+
+matchlines:
+  - '[PID     1] Exiting gracefully with code 0'
+
+regexlines:
+  - '\[ASLR\] foo at 0x[0-9a-f]{7,}'
