@@ -2,7 +2,7 @@ name: SMEP - Execute User
 description: Try to execute user space code.  
 points: 0.2
 
-BONUS: SMEP_SMAP
+bonus: SMEP_SMAP
 should_panic: true
 
 matchlines:

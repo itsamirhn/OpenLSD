@@ -2,7 +2,7 @@ name: SMAP - Read from User Stack
 description: Try to read from user space stack.  
 points: 0.2
 
-BONUS: SMEP_SMAP
+bonus: SMEP_SMAP
 should_panic: true
 
 matchlines:
