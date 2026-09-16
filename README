@@ -13,6 +13,13 @@ Because of the regexes in the other tests, that use fixed addresses, they might 
 ### SMEP/SMAP
 After we have init the memory, we turn SMEP and SMAP in the CR4 register. For the puts syscall we have copy the user buffer to a kernel buffer. For that copy_protected() is implemented that disables SMAP in order to do the copy and then afterwards SMAP is enabled back. Allocating and freeing seems a bit much for just a puts call, this is still safe as the call is puts and not printf, so in this stage it is already formatted; thus we use stac() and clac() in the syscall. The tests are build such so that they would not pass if SMEP/SMAP is not enabled. For SMEP the test tries to run a userland main(), without SMEP afterwards the instruction pointer goes to the user stack base, as that may have been on the kernel stack and popped. With SMEP enabled, it page faults as expected on the first instruction from userspace. For SMAP we read/write from/to the userland stack, which page faults with SMAP enabled, otherwise it does not.
 
+### L1TF and MDS mitigations
+#### MDS
+For this one, we just need to do `verw %ax` when switching from kernel- to usermode, which clears the microarchitectural buffers. 
+#### L1TF 
+For mitigating this, we have to invert the PTE, and not just them 0'ing them out, as that could still be a valid memory address, which can still be speculatively accessed. This is has been done by declaring the PAGE_NONPRESENT macro that is used in all the cases that an entry was zero'ed out in the code. 
+Other tests, check that the PTE are 0, which is why they fail when they run with this bonus turned one, as that is not the case anymore with the mitigation.
+
 
 # LAB 2 bonuses
 

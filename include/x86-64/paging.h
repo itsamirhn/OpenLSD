@@ -50,6 +50,13 @@
 #define PAGE_UMASK (PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC | PAGE_USER)
 #define PAGE_ADDR(x) ((x) & ~PAGE_MASK)
 
+#define PAGE_INVERT(x) (~(x) & ~PAGE_MASK)
+#ifdef BONUS_L1TF_MDS
+#define PAGE_NONPRESENT(x) PAGE_INVERT(x)
+#else
+#define PAGE_NONPRESENT(x) 0
+#endif
+
 #define PF_PRESENT  (1 << 0)
 #define PF_WRITE    (1 << 1)
 #define PF_USER     (1 << 2)

@@ -1,0 +1,5 @@
+name: L1TF MDS PTE Inversion
+description: Tests that unmapped page-table entries contain an inverted physical address
+bonus: L1TF_MDS
+points: 0.05
+required: false

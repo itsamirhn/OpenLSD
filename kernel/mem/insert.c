@@ -25,7 +25,7 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
-		*entry = 0;
+		*entry = PAGE_NONPRESENT(page2pa(page));
 		tlb_invalidate(info->pml4, (void *)base);
 		page_decref(page);
 	}
@@ -58,18 +58,18 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
 		if (*entry & PAGE_HUGE) {
-			*entry = 0;
+			*entry = PAGE_NONPRESENT(page2pa(page));
 			tlb_invalidate(info->pml4, (void *)base);
 			page_decref(page);
 		} else {
 			table = page2kva(page);
 			for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) if (table->entries[i] & PAGE_PRESENT) {
 					struct page_info *p = pa2page(PAGE_ADDR(table->entries[i]));
-					table->entries[i] = 0;
+					table->entries[i] = PAGE_NONPRESENT(page2pa(p));
 					tlb_invalidate(info->pml4, (void *)(base + (i * PAGE_SIZE)));
 					page_decref(p);
 			}
-			*entry = 0;
+			*entry = PAGE_NONPRESENT(page2pa(page));
 			tlb_invalidate(info->pml4, (void *)base);
 			page_decref(page);
 		}

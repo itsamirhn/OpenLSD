@@ -172,7 +172,7 @@ int ptbl_free(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		}
 	}
 
-	*entry = 0;
+	*entry = PAGE_NONPRESENT(page2pa(ptbl_page));
 	page_decref(ptbl_page);	
 
 	return 0;

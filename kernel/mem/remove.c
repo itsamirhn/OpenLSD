@@ -21,7 +21,7 @@ static int remove_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	if (!(*entry & PAGE_PRESENT)) return 0;
 
 	page = pa2page(PAGE_ADDR(*entry));
-	*entry = 0;
+	*entry = PAGE_NONPRESENT(page2pa(page));
 	tlb_invalidate(info->pml4, (void *)base);
 	page_decref(page);
 
@@ -46,7 +46,7 @@ static int remove_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	
 	if (info->base <= base && end <= info->end) {
 		page = pa2page(PAGE_ADDR(*entry));
-		*entry = 0;
+		*entry = PAGE_NONPRESENT(page2pa(page));
 		tlb_invalidate(info->pml4, (void *)base);
 		page_decref(page);
 		return 0;

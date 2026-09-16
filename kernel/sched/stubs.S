@@ -136,6 +136,10 @@ syscall64:
 iret64:
 	/* Restore the register state. */
 	movq %rdi, %rsp
+#ifdef BONUS_L1TF_MDS
+	movw $GDT_KDATA, %ax
+	verw %ax
+#endif
 
 	popq %rax // ds
 	movw %ax, %ds
@@ -163,6 +167,11 @@ iret64:
 .global sysret64
 sysret64:
 #ifdef BONUS_SYSCALL
+#ifdef BONUS_L1TF_MDS
+	movw $GDT_KDATA, %ax
+	verw %ax
+#endif
+
 	/* Recover the register state. */
 	movq 8(%rdi), %r15
 	movq 16(%rdi), %r14
