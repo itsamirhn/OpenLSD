@@ -1,3 +1,19 @@
+# LAB 3 bonus
+
+
+## Syscall
+In syscall_init() all MSR are set-up, with also the per-cpu struct. Then in syscall64, swapgs is used to swap the kernelgs with the userland one, then we store the userspace stack pointer in the struct, and here r12 register so we can use it here to point it to the task struct. The rest of the procedure is filling in the task struct. sysret64 just restores the registers from the task struct, and at the end swapgs to swap gs values again, before moving to userland.
+
+## Security features
+### ASLR
+The stack and code are moved to random base addresses if the executable is PIE. The "randomness" comes from rdtsc. task_relocate_elf is used to relocate the elf pointers to the correct virtual addresses. In task_load_elf, now uses a code_base which is 0 when ASLR is disabled, when enabled of course random.
+For both the code and stack base, there are 2^4 spots where they can sit. The granularity is of a page size.
+Because of the regexes in the other tests, that use fixed addresses, they might fail because of the ASLR and of course the addresses not matching anymore because of it.
+
+### SMEP/SMAP
+After we have init the memory, we turn SMEP and SMAP in the CR4 register. For the puts syscall we have copy the user buffer to a kernel buffer. For that copy_protected() is implemented that disables SMAP in order to do the copy and then afterwards SMAP is enabled back. Allocating and freeing seems a bit much for just a puts call, this is still safe as the call is puts and not printf, so in this stage it is already formatted; thus we use stac() and clac() in the syscall. The tests are build such so that they would not pass if SMEP/SMAP is not enabled. For SMEP the test tries to run a userland main(), without SMEP afterwards the instruction pointer goes to the user stack base, as that may have been on the kernel stack and popped. With SMEP enabled, it page faults as expected on the first instruction from userspace. For SMAP we read/write from/to the userland stack, which page faults with SMAP enabled, otherwise it does not.
+
+
 # LAB 2 bonuses
 
 The use after free and the out of bounds tests rely on how the pages are mapped, which cause a page fault on their access. Because interrupts are scheduled for lab 3, these tests triple fault for now. And thus no kernel panic can be issued as the test framework requires. For that we put another cprintf() after the line that should page fault, if that gets printed means that the test failed as it did not page fault.
