@@ -1,0 +1,8 @@
+name: User Fault - Map a VMA that overflows
+description: Tries to map the entire kernel space up to and including an overflow back into user space.
+points: 0.3
+
+regexlines:
+  - '0x0000000000000000 - 0x0000000000200000 .---. free'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

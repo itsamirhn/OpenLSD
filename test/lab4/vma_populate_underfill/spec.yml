@@ -1,0 +1,9 @@
+name: VMA - Populate Short Non-Anonymous
+description: Tests that VMA populate correctly handles a non-anonymous VMA with a data length less than its size, zeroing the remainder
+points: 0.2
+
+regexlines:
+  - 'Test: VMA with vm_len less than VMA size'
+  - 'Test passed: Data copied up to vm_len, rest zeroed'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

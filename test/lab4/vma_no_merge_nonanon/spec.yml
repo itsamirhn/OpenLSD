@@ -1,0 +1,10 @@
+name: VMA - No merge with non-anonymous VMAs
+description: Verifies that non-anonymous VMAs do not merge with anonymous VMAs
+points: 0.2
+
+regexlines:
+  - '0x0000000001000000 - 0x0000000001001000 .rw-. anon1'
+  - '0x0000000001001000 - 0x0000000001002000 .rw-. nonanon'
+  - '0x0000000001002000 - 0x0000000001003000 .rw-. anon2'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

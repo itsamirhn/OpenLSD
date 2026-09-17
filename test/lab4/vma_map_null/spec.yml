@@ -1,0 +1,8 @@
+name: VMA - Map NULL, not Fixed
+description: Tries to map the NULL address, not fixed
+points: 0.2
+
+regexlines:
+  - '0x0000000000000000 - 0x0000000000200000 .---. free'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

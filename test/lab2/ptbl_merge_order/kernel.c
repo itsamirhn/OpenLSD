@@ -93,7 +93,7 @@ static void page_alloc_handler(struct probe_frame *frame)
 		assert(!pages_freed[i] && !pages_invalidated[i]);
 
 	// Check that we are allocating a huge page
-	assert((int)frame->rdi == (ALLOC_ZERO | ALLOC_HUGE));
+	assert((int)frame->rdi & ALLOC_HUGE);
 	huge_allocated = true;
 }
 

@@ -1,0 +1,21 @@
+name: Syscall - mmap() populate
+description: Call mmap with MAP_POPULATE flag
+points: 0.1
+
+regexlines:
+  - '0x0000000000804000 - 0x0000000001000000 .---. free'
+  - '0x0000000001000000 - 0x0000000001002000 .rw-. user'
+  - '0x0000000001002000 - 0x0000000001003000 .---. free'
+  - '0x0000000001003000 - 0x0000000001004000 .rw-. user'
+  - '0x0000000001004000 - 0x0000000001006000 .---. free'
+  - '0x0000000001006000 - 0x0000000001007000 .rw-. user'
+  - '0x0000000001007000 - 0x000000000100a000 .---. free'
+  - '0x000000000100a000 - 0x000000000100b000 .rw-. user'
+  - '0x000000000100b000 - 0x000000000100f000 .---. free'
+  - '0x000000000100f000 - 0x0000000001010000 .rw-. user'
+  - '0x0000000001010000 - 0x00007fffffffd000 .---. free'
+  - '0x00007fffffffd000 - 0x00007fffffffe000 .rw-. stack'
+  - '0x00007fffffffe000 - 0x0000800000000000 .---. free'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'
+  - Detected 3 page faults in the mapped area, expected 3
