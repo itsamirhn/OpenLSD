@@ -82,8 +82,8 @@ static void page_alloc_handler(struct probe_frame *frame)
 	if (!track_pages)
 		return;
 
-	// Check that we are allocating a huge page
-	assert((int)frame->rdi == (ALLOC_ZERO));
+	// Check that we are not allocating a huge page
+	assert(~((int)frame->rdi & PAGE_HUGE));
 	assert(!huge_freed);
 
 	// Track how many pages we are allocating

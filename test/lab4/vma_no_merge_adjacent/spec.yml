@@ -1,0 +1,15 @@
+name: VMA - No merge with different non-anonymous VMAs
+description: Verifies that non-anonymous VMAs do not merge when permissions or backing memory is incorrect
+points: 0.2
+
+regexlines:
+  - '0x0000000000804000 - 0x0000000001000000 .---. free'
+  - '0x0000000001000000 - 0x0000000001001000 .rw-. nonanon1'
+  - '0x0000000001001000 - 0x0000000001002000 .r--. nonanon2'
+  - '0x0000000001002000 - 0x0000000001003000 .rw-. nonanon3'
+  - '0x0000000001003000 - 0x0000000001004000 .rw-. nonanon4'
+  - '0x0000000001004000 - 0x0000000001006000 .r--. nonanon5'
+  - '0x0000000001006000 - 0x0000000001007000 .r--. nonanon6'
+  - '0x0000000001007000 - 0x00007fffffffd000 .---. free'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

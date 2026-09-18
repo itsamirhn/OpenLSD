@@ -1,0 +1,7 @@
+name: VMA - Lazy Loading Syscall
+description: Tests that memory remains unmapped by default
+points: 0.4
+
+regexlines:
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

@@ -1,0 +1,9 @@
+name: Evil - munmap()
+description: Tries to call munmap on kernel memory
+points: 0.3
+
+required: true
+
+regexlines:
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'
