@@ -154,6 +154,8 @@ struct task *task_alloc(pid_t ppid)
 	cprintf("[PID %5u] New task with PID %u\n",
 	        cur_task ? cur_task->task_pid : 0, task->task_pid);
 
+	list_init(&task->task_mmap);
+	rb_init(&task->task_rb);
 	return task;
 }
 

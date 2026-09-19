@@ -61,7 +61,6 @@ int insert_vma(struct task *task, struct vma *vma)
 	return 0;
 }
 
-
 /* Allocates and adds a new VMA for the given task.
  *
  * This function first allocates a new VMA. Then it copies over the given
@@ -74,8 +73,27 @@ int insert_vma(struct task *task, struct vma *vma)
 struct vma *add_executable_vma(struct task *task, char *name, void *addr,
 	size_t size, int flags, void *src, size_t len, size_t src_offset)
 {
-	/* LAB 4: your code here. */
-	return NULL;
+	struct vma *rhs = NULL;
+	struct vma *lhs = NULL;
+	struct vma *vma = kmalloc(sizeof(struct vma));
+	if(!vma) { return NULL; }
+
+	list_init(&vma->vm_mmap);
+	vma->vm_base = addr;
+	vma->vm_end = addr + size;
+	vma->vm_flags = flags;
+	vma->vm_name = name;
+	vma->vm_src = src;
+	vma->vm_len = len;
+	vma->vm_offset = src_offset;
+
+	if (insert_vma(task, vma) < 0) {
+		kfree(vma);
+		return NULL;
+	}
+	vma = merge_vmas(task, vma);
+
+	return vma;
 }
 
 /* A simplified wrapper to add anonymous VMAs, i.e. VMAs not backed by an

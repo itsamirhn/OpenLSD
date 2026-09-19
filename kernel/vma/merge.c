@@ -12,8 +12,19 @@
  */
 struct vma *merge_vma(struct task *task, struct vma *lhs, struct vma *rhs)
 {
-	/* LAB 4: your code here. */
-	return NULL;
+	if (lhs->vm_end != rhs->vm_base || lhs->vm_flags != rhs->vm_flags || lhs->vm_src != rhs->vm_src) {
+		return NULL;
+	}
+
+	if (lhs->vm_src && lhs->vm_offset + lhs->vm_len != rhs->vm_offset) {
+		return NULL;
+	}
+
+	lhs->vm_end = rhs->vm_end;
+	lhs->vm_len += rhs->vm_len;
+	remove_vma(task, rhs);
+	kfree(rhs);
+	return lhs;
 }
 
 /* Given a task and a VMA, this function attempts to merge the given VMA with
@@ -22,7 +33,14 @@ struct vma *merge_vma(struct task *task, struct vma *lhs, struct vma *rhs)
  */
 struct vma *merge_vmas(struct task *task, struct vma *vma)
 {
-	/* LAB 4: your code here. */
+	struct vma *lhs = NULL;
+	struct vma *rhs = NULL;
+
+	if(vma->vm_base) { 	lhs = task_find_vma(task, vma->vm_base - 1); }
+
+	rhs = task_find_vma(task, vma->vm_end + 1);
+
+	if(lhs) vma = merge_vma(task, lhs, vma);
+	if(rhs) vma = merge_vma(task, vma, rhs);
 	return vma;
 }
-

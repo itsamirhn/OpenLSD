@@ -11,6 +11,7 @@
 #include <kernel/sched/syscall.h>
 
 #include <kernel/sched/task.h>
+#include <kernel/vma/pfault.h>
 
 
 
@@ -265,7 +266,9 @@ void page_fault_handler(struct int_frame *frame)
 	if ((frame->cs & 3) == 0) {
 		cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
 		print_int_frame(frame);
-		panic("Kernel page fault");
+		if(!task_page_fault_handler(cur_task, fault_va, frame->err_code)){
+			panic("Kernel page fault handler failed");
+		}
 	}
 
 	/* We have already handled kernel-mode exceptions, so if we get here, the
