@@ -117,6 +117,62 @@ struct vma *add_anonymous_vma(struct task *task, char *name, void *addr,
 struct vma *add_vma(struct task *task, char *name, void *addr, size_t size,
 	int flags)
 {
-	/* LAB 4: your code here. */
+	struct list *node;
+	uintptr_t lower = PAGE_SIZE;
+	uintptr_t upper;
+	uintptr_t candidate;
+
+	if (!task || !size) {
+		return NULL;
+	}
+
+	size = ROUNDUP(size, PAGE_SIZE);
+	if (size > USER_LIM - lower) {
+		return NULL;
+	}
+
+	upper = addr ? ROUNDUP((uintptr_t)addr + size, PAGE_SIZE) : USER_LIM;
+	if (upper > USER_LIM) {
+		upper = USER_LIM;
+	}
+	if (upper < lower + size) {
+		upper = USER_LIM;
+	}
+
+	/* Search a bounded interval from high addresses toward low addresses. */
+	for (int pass = 0; pass < (addr ? 2 : 1); pass++) {
+		uintptr_t limit = pass == 0 ? upper : USER_LIM;
+		uintptr_t floor = pass == 0 ? lower : upper;
+
+		if (pass == 1 && upper == USER_LIM) {
+			break;
+		}
+
+		candidate = limit;
+		node = list_tail(&task->task_mmap);
+		while (node) {
+			struct vma *vma = container_of(node, struct vma, vm_mmap);
+			uintptr_t vma_base = (uintptr_t)vma->vm_base;
+			uintptr_t vma_end = (uintptr_t)vma->vm_end;
+
+			if (vma_base >= candidate) {
+				node = list_prev(&task->task_mmap, node);
+				continue;
+			}
+			if (vma_end < candidate && candidate - vma_end >= size) {
+				uintptr_t base = candidate - size;
+				if (base >= floor && base >= lower) {
+					return add_anonymous_vma(task, name, (void *)base, size, flags);
+				}
+			}
+			candidate = vma_base;
+			node = list_prev(&task->task_mmap, node);
+		}
+
+		if (candidate >= floor + size && candidate - size >= lower) {
+			return add_anonymous_vma(task, name, (void *)(candidate - size), size, flags);
+		}
+	}
+
 	return NULL;
 }
