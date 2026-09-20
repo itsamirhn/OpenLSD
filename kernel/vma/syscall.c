@@ -92,8 +92,6 @@ void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
 	uintptr_t offset)
 {
 	const int supported_flags = MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED | MAP_POPULATE;
-	uintptr_t start;
-	uintptr_t end;
 	int vma_flags = 0;
 	struct vma *vma;
 
@@ -107,19 +105,17 @@ void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
 		return MAP_FAILED;
 	}
 
-	start = (uintptr_t)addr;
 	if (flags & MAP_FIXED) {
-		if (!addr || !page_aligned(start)) {
+		if (!addr || !page_aligned((uintptr_t) addr)) {
 			return MAP_FAILED;
 		}
 	} else {
-		start = ROUNDDOWN(start, PAGE_SIZE);
+		addr = ROUNDDOWN(addr, PAGE_SIZE);
 	}
-	if (start + len < start) { // Check for overflow
+	if (addr + len < addr) { // Check for overflow
 		return MAP_FAILED;
 	}
-	end = ROUNDUP(start + len, PAGE_SIZE);
-	if (end > USER_LIM) {
+	if (ROUNDUP(addr + len, PAGE_SIZE) > (void *) USER_LIM) {
 		return MAP_FAILED;
 	}
 
@@ -133,8 +129,8 @@ void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
 		vma_flags |= VM_EXEC;
 	}
 	if (flags & MAP_FIXED) {
-		unmap_and_remove_vma_range(cur_task, (void *)start, len);
-		vma = add_anonymous_vma(cur_task, "user", (void *)start,len, vma_flags);
+		unmap_and_remove_vma_range(cur_task, addr, len);
+		vma = add_anonymous_vma(cur_task, "user", addr,len, vma_flags);
 	} else {
 		vma = add_vma(cur_task, "user", addr, len, vma_flags);
 	}
