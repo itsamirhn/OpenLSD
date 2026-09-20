@@ -231,8 +231,6 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 	
 	uintptr_t code_base = 0;
 	uintptr_t stack_top = USTACK_TOP;
-	static char *segment_names[] = { ".text", ".rodata", ".data", ".bss", ".stab" };
-	size_t segment_index = 0;
 
 	#ifdef BONUS_ASLR
 		if (elf_hdr->e_type == ELF_TYPE_DYN) code_base = ASLR_CODE_MIN + (read_tsc() % ASLR_CODE_SLOTS) * PAGE_SIZE;
@@ -241,7 +239,7 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 
 	for (size_t i = 0; i < elf_hdr->e_phnum; i++, prog_hdr++) {
 		if (prog_hdr->p_type != ELF_PROG_LOAD) continue;
-
+		
 		uintptr_t va = code_base + prog_hdr->p_va;
 		int flags = VM_READ;
 
@@ -251,8 +249,12 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 
 		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) flags |= VM_WRITE;
 		if (prog_hdr->p_flags & ELF_PROG_FLAG_EXEC) flags |= VM_EXEC;
-		assert(segment_index < sizeof segment_names / sizeof *segment_names);
-		assert(add_executable_vma(task, segment_names[i], (void *)va, prog_hdr->p_memsz, flags, binary, prog_hdr->p_filesz,prog_hdr->p_offset));
+
+		char *name = ".rodata";
+		if (flags & VM_EXEC) name = ".text";
+		else if (flags & VM_WRITE) name = ".data";
+
+		assert(add_executable_vma(task, name, (void *)va, prog_hdr->p_memsz, flags, binary, prog_hdr->p_filesz,prog_hdr->p_offset));
 	}
 
 	#ifdef BONUS_ASLR
