@@ -9,6 +9,7 @@
 #include <kernel/monitor.h>
 #include <kernel/mem.h>
 #include <kernel/sched.h>
+#include <kernel/vma.h>
 
 
 pid_t pid_max = 1 << 16;
@@ -230,27 +231,28 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 	
 	uintptr_t code_base = 0;
 	uintptr_t stack_top = USTACK_TOP;
+	static char *segment_names[] = { ".text", ".rodata", ".data", ".bss", ".stab" };
+	size_t segment_index = 0;
 
 	#ifdef BONUS_ASLR
 		if (elf_hdr->e_type == ELF_TYPE_DYN) code_base = ASLR_CODE_MIN + (read_tsc() % ASLR_CODE_SLOTS) * PAGE_SIZE;
 		stack_top = USTACK_TOP - (read_tsc() % ASLR_STACK_SLOTS) * PAGE_SIZE;
 	#endif
 
-	load_pml4(PADDR(task->task_pml4));
-
 	for (size_t i = 0; i < elf_hdr->e_phnum; i++, prog_hdr++) {
 		if (prog_hdr->p_type != ELF_PROG_LOAD) continue;
 
 		uintptr_t va = code_base + prog_hdr->p_va;
+		int flags = VM_READ;
 
-		populate_region(task->task_pml4, (void *)va, prog_hdr->p_memsz, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
-		memcpy((void *)va, binary + prog_hdr->p_offset, prog_hdr->p_filesz);
-		memset((void *)(va + prog_hdr->p_filesz), 0, prog_hdr->p_memsz - prog_hdr->p_filesz);
+		assert(prog_hdr->p_filesz <= prog_hdr->p_memsz);
+		assert(va >= prog_hdr->p_va);
+		assert(prog_hdr->p_memsz <= USER_LIM - va);
 
-		uint64_t flags = PAGE_PRESENT | PAGE_USER;
-		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) flags |= PAGE_WRITE;
-		if (!(prog_hdr->p_flags & ELF_PROG_FLAG_EXEC)) flags |= PAGE_NO_EXEC;
-		protect_region(task->task_pml4, (void *)va, prog_hdr->p_memsz, flags);
+		if (prog_hdr->p_flags & ELF_PROG_FLAG_WRITE) flags |= VM_WRITE;
+		if (prog_hdr->p_flags & ELF_PROG_FLAG_EXEC) flags |= VM_EXEC;
+		assert(segment_index < sizeof segment_names / sizeof *segment_names);
+		assert(add_executable_vma(task, segment_names[i], (void *)va, prog_hdr->p_memsz, flags, binary, prog_hdr->p_filesz,prog_hdr->p_offset));
 	}
 
 	#ifdef BONUS_ASLR
@@ -263,11 +265,7 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 	#endif
 	task->task_frame.rip = code_base + elf_hdr->e_entry;
 
-	/* Now map one page for the program's initial stack at virtual address
-	 * stack_top - PAGE_SIZE.
-	 */
-	populate_region(task->task_pml4, (void *)(stack_top - PAGE_SIZE), PAGE_SIZE, PAGE_PRESENT | PAGE_USER | PAGE_WRITE | PAGE_NO_EXEC);
-	load_pml4(PADDR(kernel_pml4));
+	assert(add_anonymous_vma(task, "stack", (void *)(stack_top - PAGE_SIZE),PAGE_SIZE, VM_READ | VM_WRITE));
 }
 
 /* Allocates a new task with task_alloc(), loads the named ELF binary using
@@ -312,7 +310,7 @@ void task_free(struct task *task)
 	    cur_task ? cur_task->task_pid : task->task_ppid,
  	    task->task_pid);
 
-
+	free_all_vmas(task);
 	/* Free the task. */
 	kfree(task);
 }
@@ -393,18 +391,16 @@ void task_run(struct task *task)
 void assert_user_mem(struct task *task, void *va, size_t size, int flags)
 {
 	uintptr_t fault_va;
+	int vma_flags = 0;
 
-	/* LAB 4: your code here */
-
-	uint64_t page_flags = PAGE_USER;
 	if (flags & PROT_READ)
-		page_flags |= PAGE_PRESENT;
+		vma_flags |= VM_READ;
 	if (flags & PROT_WRITE)
-		page_flags |= PAGE_WRITE;
-	if (!(flags & PROT_EXEC))
-		page_flags |= PAGE_NO_EXEC;
+		vma_flags |= VM_WRITE;
+	if (flags & PROT_EXEC)
+		vma_flags |= VM_EXEC;
 
-	if (check_user_mem(&fault_va, task->task_pml4, va, size, page_flags) < 0) {
+	if (check_user_vma_range(&fault_va, task, va, size, vma_flags) < 0) {
 		cprintf("[PID %5u] Access violation for va %p\n",
 			task->task_pid, fault_va);
 		task_destroy(task);

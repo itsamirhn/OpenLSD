@@ -40,7 +40,13 @@ struct vma *merge_vmas(struct task *task, struct vma *vma)
 
 	rhs = task_find_vma(task, vma->vm_end + 1);
 
-	if(lhs) vma = merge_vma(task, lhs, vma);
-	if(rhs) vma = merge_vma(task, vma, rhs);
+	if(lhs != NULL){
+		lhs = merge_vma(task, lhs, vma);
+		vma = lhs ? lhs : vma;
+	} 
+	if(rhs != NULL){
+		rhs = merge_vma(task, vma, rhs);
+		vma = rhs ? rhs : vma;
+	} 
 	return vma;
 }
