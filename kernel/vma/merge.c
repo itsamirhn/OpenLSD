@@ -12,12 +12,12 @@
  */
 struct vma *merge_vma(struct task *task, struct vma *lhs, struct vma *rhs)
 {
-	if (lhs->vm_end != rhs->vm_base || lhs->vm_flags != rhs->vm_flags || lhs->vm_src != rhs->vm_src) {
-		return NULL;
-	}
-
-	if (lhs->vm_src && lhs->vm_offset + lhs->vm_len != rhs->vm_offset) {
-		return NULL;
+	if (lhs->vm_end != rhs->vm_base) return NULL;
+	if (lhs->vm_flags != rhs->vm_flags) return NULL;
+	if (!lhs->vm_src != !rhs->vm_src) return NULL;
+	if (lhs->vm_src) {
+		if ((char *)lhs->vm_src + lhs->vm_len != (char *)rhs->vm_src) return NULL;
+		if ((char *)lhs->vm_base + lhs->vm_offset + lhs->vm_len != (char *)rhs->vm_base + rhs->vm_offset) return NULL;
 	}
 
 	lhs->vm_end = rhs->vm_end;
