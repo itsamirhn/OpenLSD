@@ -254,7 +254,10 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 		if (flags & VM_EXEC) name = ".text";
 		else if (flags & VM_WRITE) name = ".data";
 
-		assert(add_executable_vma(task, name, (void *)va, prog_hdr->p_memsz, flags, binary, prog_hdr->p_filesz,prog_hdr->p_offset));
+		uintptr_t base = ROUNDDOWN(va, PAGE_SIZE);
+		uintptr_t end = ROUNDUP(va + prog_hdr->p_memsz, PAGE_SIZE);
+
+		assert(add_executable_vma(task, name, (void *)base, end - base, flags, binary + prog_hdr->p_offset, prog_hdr->p_filesz, va - base) != NULL);
 	}
 
 	#ifdef BONUS_ASLR
