@@ -203,8 +203,13 @@ void int_dispatch(struct int_frame *frame)
 			page_fault_handler(frame);
 			return;
 		case INT_SYSCALL:
+		#ifdef BONUS_SYSCALL
 			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
 				frame->rdx, frame->r10, frame->r8, frame->r9);
+		#else
+			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
+				frame->rdx, frame->rcx, frame->r8, frame->r9);
+		#endif
 			return;
 		default: break;
 	}
@@ -260,24 +265,25 @@ void page_fault_handler(struct int_frame *frame)
 	/* Read the CR2 register to find the faulting address. */
 	fault_va = (void *)read_cr2();
 
-	/* LAB 4: your code here */
-
 	/* Handle kernel-mode page faults. */
 	if ((frame->cs & 3) == 0) {
 		cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
 		print_int_frame(frame);
-		if(!task_page_fault_handler(cur_task, fault_va, frame->err_code)){
+		if (task_page_fault_handler(cur_task, fault_va, frame->err_code) < 0) {
 			panic("Kernel page fault handler failed");
 		}
+		return;
 	}
 
 	/* We have already handled kernel-mode exceptions, so if we get here, the
 	 * page fault has happened in user mode.
 	 */
 
-	/* Destroy the task that caused the fault. */
-	cprintf("[PID %5u] user fault va %p ip %p\n",
-		cur_task->task_pid, fault_va, frame->rip);
-	print_int_frame(frame);
-	task_destroy(cur_task);
+	ret = task_page_fault_handler(cur_task, fault_va, frame->err_code);
+	if (ret < 0) {
+		cprintf("[PID %5u] user fault va %p ip %p\n",
+			cur_task->task_pid, fault_va, frame->rip);
+		print_int_frame(frame);
+		task_destroy(cur_task);
+	}
 }
