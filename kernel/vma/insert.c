@@ -73,8 +73,6 @@ int insert_vma(struct task *task, struct vma *vma)
 struct vma *add_executable_vma(struct task *task, char *name, void *addr,
 	size_t size, int flags, void *src, size_t len, size_t src_offset)
 {
-	struct vma *rhs = NULL;
-	struct vma *lhs = NULL;
 	struct vma *vma = kmalloc(sizeof(struct vma));
 	if(!vma) { return NULL; }
 
