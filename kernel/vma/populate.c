@@ -41,31 +41,31 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 	populate_region(task->task_pml4, (void *)start, end - start, page_flags);
 
 	if ((*vma)->vm_src && (*vma)->vm_len) {
-		uintptr_t cursor = start;
-		uintptr_t data_offset = start - vma_start;
+		uintptr_t data_base = (uintptr_t)(*vma)->vm_base + (*vma)->vm_offset;
+		uintptr_t data_end = data_base + (*vma)->vm_len;
+		uintptr_t cursor = start > data_base ? start : data_base;
+		uintptr_t stop = end < data_end ? end : data_end;
 
-		while (cursor < end && data_offset < (*vma)->vm_len) {
-			physaddr_t *entry;
+		while (cursor < stop) {
 			struct page_info *page;
-			size_t copy_size = PAGE_SIZE - (cursor & (PAGE_SIZE - 1));
-
-			if (copy_size > end - cursor){
-				copy_size = end - cursor;
-			}
-			if (copy_size > (*vma)->vm_len - data_offset){
-				copy_size = (*vma)->vm_len - data_offset;
-			}
+			physaddr_t *entry;
+			size_t page_size, offset, chunk;
 
 			page = page_lookup(task->task_pml4, (void *)cursor, &entry);
-			if (!page){
-				return -1;
-			}
-			memcpy((char *)page2kva(page) + (cursor & (PAGE_SIZE - 1)),(char *)(*vma)->vm_src + (*vma)->vm_offset + data_offset,copy_size);
 
-			cursor += copy_size;
-			data_offset += copy_size;
+			if (!page) return -1;
+
+			page_size = (*entry & PAGE_HUGE) ? HPAGE_SIZE : PAGE_SIZE;
+			offset = cursor & (page_size - 1);
+			chunk = page_size - offset > stop - cursor ? stop - cursor : page_size - offset;
+
+			memcpy((char *)page2kva(page) + offset, (char *)(*vma)->vm_src + (cursor - data_base), chunk);
+
+			cursor += chunk;
 		}
 	}
+
+	protect_region(task->task_pml4, (void *)start, end - start, page_flags);
 
 	return 0;
 }
