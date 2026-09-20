@@ -162,7 +162,7 @@ void sys_munmap(void *addr, size_t len)
 	if (start >= USER_LIM || end > USER_LIM) {
 		return;
 	}
-	unmap_and_remove_vma_range(cur_task, (void *)start, len);
+	unmap_and_remove_vma_range(cur_task, (void *)start, end-start);
 }
 
 int sys_mprotect(void *addr, size_t len, int prot)
