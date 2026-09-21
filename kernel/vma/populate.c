@@ -65,8 +65,6 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 		}
 	}
 
-	protect_region(task->task_pml4, (void *)start, end - start, page_flags);
-
 	return 0;
 }
 
