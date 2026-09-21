@@ -77,6 +77,7 @@ struct vma *add_executable_vma(struct task *task, char *name, void *addr,
 	if(!vma) { return NULL; }
 
 	list_init(&vma->vm_mmap);
+	rb_node_init(&vma->vm_rb);
 	vma->vm_base = addr;
 	vma->vm_end = addr + size;
 	vma->vm_flags = flags;
