@@ -167,12 +167,43 @@ void sys_munmap(void *addr, size_t len)
 
 int sys_mprotect(void *addr, size_t len, int prot)
 {
-	/* LAB 4: your code here. */
-	return -ENOSYS;
+	uintptr_t start;
+	uintptr_t end;
+
+	if (!len || (prot & ~(PROT_READ | PROT_WRITE | PROT_EXEC)) || ((prot & (PROT_WRITE | PROT_EXEC)) && !(prot & PROT_READ))) {
+		return -EINVAL;
+	}
+	if ((uintptr_t)addr >= USER_LIM || (uintptr_t)addr + len < (uintptr_t)addr) {
+		return -EINVAL;
+	}
+	start = ROUNDDOWN((uintptr_t)addr, PAGE_SIZE);
+	end = ROUNDUP((uintptr_t)addr + len, PAGE_SIZE);
+	if (end <= start || end > USER_LIM) { // Check for overflow
+		return -EINVAL;
+	}
+	return protect_vma_range(cur_task, (void *)start, end - start, prot);
 }
 
 int sys_madvise(void *addr, size_t len, int advise)
 {
-	/* LAB 4: your code here. */
-	return -ENOSYS;
+	uintptr_t start;
+	uintptr_t end;
+
+	if (!len || (advise != MADV_WILLNEED && advise != MADV_DONTNEED)) {
+		return -EINVAL;
+	}
+	if ((uintptr_t)addr >= USER_LIM || (uintptr_t)addr + len < (uintptr_t)addr) { // Check for overflow
+		return -EINVAL;
+	}
+	start = ROUNDDOWN((uintptr_t)addr, PAGE_SIZE);
+	end = ROUNDUP((uintptr_t)addr + len, PAGE_SIZE);
+	if (end <= start || end > USER_LIM) { // Check for overflow
+		return -EINVAL;
+	}
+	if (advise == MADV_WILLNEED) {
+		return populate_vma_range(cur_task, (void *)start, end - start, 0);
+	}else if (advise == MADV_DONTNEED) {
+		return unmap_clean_pages_range(cur_task, (void *)start, end - start);
+	}
+	return -EINVAL;
 }

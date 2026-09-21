@@ -13,7 +13,21 @@
 int do_protect_vma(struct task *task, void *base, size_t size, struct vma **vma,
 	void *udata)
 {
-	/* LAB 4 (bonus): your code here. */
+	struct vma *current = *vma;
+	struct vma *target = split_vmas(task, current, base, size);
+	uintptr_t start = (uintptr_t)base;
+	uintptr_t end = start + size;
+	int flags = *(int *)udata;
+
+	if (base > current->vm_base && target == current){
+		return -1; //split_vmas failed
+	} 
+
+	target->vm_flags = flags;
+	protect_region(task->task_pml4, target->vm_base,target->vm_end - target->vm_base,
+		(flags & VM_WRITE ? PAGE_WRITE : 0) | (flags & VM_EXEC ? 0 : PAGE_NO_EXEC) | (flags ? PAGE_USER : 0));
+
+	*vma = merge_vmas(task, target);
 	return 0;
 }
 

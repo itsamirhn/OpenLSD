@@ -492,4 +492,9 @@ $(OBJDIR)/.deps: $(foreach dir, $(OBJDIRS), $(wildcard $(OBJDIR)/$(dir)/*.d))
 
 -include $(OBJDIR)/.deps
 
-.PHONY: all handin tarball clean realclean grade handin-check gdb test FORCE .gdbrc vsc.gdbrc
+
+test-fast: $(IMAGES)
+	$(V)+$(TESTER) $(LAB) --no-clean --parallel $(TEST_PARALLEL) --bonus "$(BONUS)"
+
+
+.PHONY: all handin tarball clean realclean grade handin-check gdb test FORCE .gdbrc vsc.gdbrc test-fast
