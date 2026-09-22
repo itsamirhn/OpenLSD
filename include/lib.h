@@ -10,6 +10,7 @@
 #include <task.h>
 #include <syscall.h>
 #include <paging.h>
+#include <time.h>
 
 #include <x86-64/memory.h>
 
@@ -49,6 +50,7 @@ int getc(void);
 pid_t getpid(void);
 int kill(pid_t);
 void exit(int);
+int gettimeofday(struct timeval *tv, void *tz);
 
 
 int mquery(struct vma_info *info, void *addr);
@@ -85,4 +87,3 @@ int madvise(void *addr, size_t len, int advise);
 
 /* vma.c */
 void print_vmas(void);
-

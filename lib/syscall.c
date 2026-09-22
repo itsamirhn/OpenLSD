@@ -63,11 +63,16 @@ void exit(int exitcode)
 pid_t getpid(void)
 {
 	#ifdef BONUS_VDSO
-	struct vdso_data *vdso_data = (struct vdso_data *)VVAR_BASE;
+	const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
 	return vdso_data->pid;
 	#else
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
 	#endif
+}
+
+int gettimeofday(struct timeval *tv, void *tz)
+{
+	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
 }
 
 int mquery(struct vma_info *info, void *addr)

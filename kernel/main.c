@@ -14,6 +14,7 @@
 #include <kernel/test/probe.h>
 #include <kernel/test/test.h>
 #include <kernel/symbols.h>
+#include <kernel/time.h>
 
 
 uint8_t *find_user_binary() {
@@ -69,6 +70,7 @@ void kmain(struct boot_info *boot_info)
 	/* Set up segmentation, interrupts and system calls. */
 	gdt_init();
 	idt_init();
+	time_init();
 	syscall_init();
 	/* Lab 1 memory management initialization functions */
 	mem_init(boot_info);

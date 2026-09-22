@@ -12,5 +12,6 @@ enum {
 	SYS_munmap,
 	SYS_mprotect,
 	SYS_madvise,
+	SYS_gettimeofday,
 	NSYSCALLS,
 };

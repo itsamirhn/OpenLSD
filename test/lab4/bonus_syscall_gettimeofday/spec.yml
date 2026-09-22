@@ -1,0 +1,8 @@
+name: Syscall - gettimeofday()
+description: Checks that gettimeofday() returns a well-formed timeval and that the clock advances monotonically between two calls
+points: 1
+
+regexlines:
+  - '.TIME. gettimeofday is monotonic and advancing'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

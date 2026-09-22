@@ -1,5 +1,6 @@
 # LAB 4 code
 KERNEL_SRCFILES += \
+	kernel/time.c \
 	kernel/vma/find.c \
 	kernel/vma/insert.c \
 	kernel/vma/merge.c \
@@ -12,4 +13,3 @@ KERNEL_SRCFILES += \
 	kernel/vma/syscall.c \
 	kernel/vma/user.c \
 	kernel/vma/walk.c
-
