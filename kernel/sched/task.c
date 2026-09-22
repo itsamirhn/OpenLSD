@@ -5,6 +5,9 @@
 #include <task.h>
 #include <cpu.h>
 #include <lib.h>
+#ifdef BONUS_VDSO
+#include <vdso.h>
+#endif
 
 #include <kernel/monitor.h>
 #include <kernel/mem.h>
@@ -99,6 +102,23 @@ static int task_setup_vas(struct task *task)
 	return 0;
 }
 
+#ifdef BONUS_VDSO
+static int task_setup_vdso(struct task *task) {
+
+	struct page_info *page = page_alloc(ALLOC_ZERO);
+	if (!page) return -ENOMEM;
+
+	struct vdso_data *vdso_data = (struct vdso_data *)page2kva(page);
+	vdso_data->pid = task->task_pid;
+	
+	// It should have better error handling ... but assertions are fine for now
+	assert(page_insert(task->task_pml4, page, (void *)VVAR_BASE, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);
+	assert(add_anonymous_vma(task, "vvar", (void *)VVAR_BASE, PAGE_SIZE, VM_READ) != NULL);
+
+	return 0;
+}
+#endif
+
 /* Allocates and initializes a new task.
  * On success, the new task is returned.
  */
@@ -157,6 +177,11 @@ struct task *task_alloc(pid_t ppid)
 
 	list_init(&task->task_mmap);
 	rb_init(&task->task_rb);
+
+	#ifdef BONUS_VDSO
+	assert(task_setup_vdso(task) == 0);
+	#endif
+
 	return task;
 }
 

@@ -44,7 +44,7 @@ TEST_DUMP = 0
 # your codebase.
 #
 # This property is case-sensitive! Make sure to capitalize all items.
-BONUS = #L1TF_MDS ASLR SMEP_SMAP SYSCALL #PAGING_INVALID_FREE OUT_OF_BOUNDS DOUBLE_FREE INVALID_FREE USE_AFTER_FREE  
+BONUS = VDSO #L1TF_MDS ASLR SMEP_SMAP SYSCALL #PAGING_INVALID_FREE OUT_OF_BOUNDS DOUBLE_FREE INVALID_FREE USE_AFTER_FREE  
 
 # This setting sets the number of cores available to OpenLSD. When
 # not provided, the default is 1. Changing this is only relevant

@@ -1,0 +1,13 @@
+name: vDSO - getpid without a syscall
+description: Verifies that getpid() is served from the read-only vvar page the kernel maps into every task, and that SYS_getpid never reaches the kernel
+points: 1
+
+bonus: VDSO
+
+regexlines:
+  - '.VDSO. getpid\(\) returned 1 without a syscall'
+  - '0x00007fffffffc000 - 0x00007fffffffd000 .r--. vvar'
+  - '0x00007fffffffd000 - 0x00007fffffffe000 .rw-. stack'
+  - '.VDSO. SYS_getpid reached the kernel 0 times, expected 0'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

@@ -3,6 +3,9 @@
 
 #include <syscall.h>
 #include <lib.h>
+#ifdef BONUS_VDSO
+#include <vdso.h>
+#endif
 
 extern int64_t do_syscall(uint64_t a1, uint64_t a2,
 	uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6, uint64_t num);
@@ -59,7 +62,12 @@ void exit(int exitcode)
 
 pid_t getpid(void)
 {
+	#ifdef BONUS_VDSO
+	struct vdso_data *vdso_data = (struct vdso_data *)VVAR_BASE;
+	return vdso_data->pid;
+	#else
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
+	#endif
 }
 
 int mquery(struct vma_info *info, void *addr)
@@ -86,5 +94,3 @@ int madvise(void *addr, size_t len, int advice)
 {
 	return syscall(SYS_madvise, 0, (uint64_t)addr, len, advice, 0, 0, 0);
 }
-
-
