@@ -64,7 +64,10 @@ pid_t getpid(void)
 {
 	#ifdef BONUS_VDSO
 	static pid_t (*vgetpid)(void);
-	if (!vgetpid) vgetpid = vdso_sym((void *)VDSO_BASE, "__vdso_getpid");
+	if (!vgetpid) {
+		const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
+		vgetpid = vdso_sym((void *)vdso_data->vdso_base, "__vdso_getpid");
+	}
 	if (vgetpid) return vgetpid();
 	#endif
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
@@ -74,7 +77,10 @@ int gettimeofday(struct timeval *tv, void *tz)
 {
 	#ifdef BONUS_VDSO
 	static int (*vgettimeofday)(struct timeval *tv, void *tz);
-	if (!vgettimeofday) vgettimeofday = vdso_sym((void *)VDSO_BASE, "__vdso_gettimeofday");
+	if (!vgettimeofday) {
+		const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
+		vgettimeofday = vdso_sym((void *)vdso_data->vdso_base, "__vdso_gettimeofday");
+	}
 	if (vgettimeofday) return vgettimeofday(tv, tz);
 	#endif
 	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);

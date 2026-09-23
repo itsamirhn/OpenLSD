@@ -109,7 +109,7 @@ static int task_setup_vas(struct task *task)
 extern uint8_t vdso_blob_start[];
 extern uint8_t vdso_blob_end[];
 
-static int task_map_vdso(struct task *task) {
+static int task_map_vdso(struct task *task, uintptr_t vdso_base) {
 	struct elf *ehdr = (struct elf *)vdso_blob_start;
 	struct elf_proghdr *phdr;
 	size_t i;
@@ -125,11 +125,11 @@ static int task_map_vdso(struct task *task) {
 		if (phdr->p_type != ELF_PROG_LOAD) continue;
 		if (phdr->p_flags & ELF_PROG_FLAG_EXEC) flags |= VM_EXEC;
 
-		va = VDSO_BASE + phdr->p_va;
+		va = vdso_base + phdr->p_va;
 		base = ROUNDDOWN(va, PAGE_SIZE);
 		end = ROUNDUP(va + phdr->p_memsz, PAGE_SIZE);
 
-		assert(end <= VDSO_BASE + VDSO_MAX_PAGES * PAGE_SIZE);
+		assert(end <= vdso_base + VDSO_MAX_PAGES * PAGE_SIZE);
 
 		assert(add_executable_vma(task, "vdso", (void *)base, end - base, flags, vdso_blob_start + phdr->p_offset, phdr->p_filesz, va - base) != NULL);
 	}
@@ -142,8 +142,11 @@ static int task_setup_vdso(struct task *task) {
 	struct page_info *page = page_alloc(ALLOC_ZERO);
 	if (!page) return -ENOMEM;
 
+	uintptr_t vdso_base = VDSO_BASE - (read_tsc() % VDSO_RANDOM_SLOTS) * PAGE_SIZE;
+
 	struct vdso_data *vdso_data = (struct vdso_data *)page2kva(page);
 	vdso_data->pid = task->task_pid;
+	vdso_data->vdso_base = vdso_base;
 	vdso_data->tsc_base = time_tsc_base();
 	vdso_data->tsc_khz = time_tsc_khz();
 	vdso_data->epoch_base = time_epoch_base();
@@ -152,7 +155,7 @@ static int task_setup_vdso(struct task *task) {
 	assert(page_insert(task->task_pml4, page, (void *)VVAR_BASE, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);
 	assert(add_anonymous_vma(task, "vvar", (void *)VVAR_BASE, PAGE_SIZE, VM_READ) != NULL);
 
-	task_map_vdso(task);
+	task_map_vdso(task, vdso_base);
 
 	return 0;
 }
