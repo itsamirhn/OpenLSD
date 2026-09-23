@@ -7,7 +7,7 @@
 #define VVAR_BASE (USTACK_TOP - 2 * PAGE_SIZE)
 #define VDSO_MAX_PAGES 3
 #define VDSO_BASE (VVAR_BASE - VDSO_MAX_PAGES * PAGE_SIZE)
-#define VDSO_RANDOM_SLOTS 16
+#define VDSO_RANDOM_SLOTS (1 << 6)
 
 struct vdso_data {
 	pid_t pid; // The PID of the task this page belongs to.

@@ -143,7 +143,8 @@ static int task_setup_vdso(struct task *task) {
 	if (!page) return -ENOMEM;
 
 	uintptr_t vvar_base = VVAR_BASE - (read_tsc() % VDSO_RANDOM_SLOTS) * PAGE_SIZE;
-	uintptr_t vdso_base = vvar_base - VDSO_MAX_PAGES * PAGE_SIZE;
+	uintptr_t vdso_base = VDSO_BASE - (read_tsc() % VDSO_RANDOM_SLOTS) * PAGE_SIZE;
+	// uintptr_t vdso_base = vvar_base - VDSO_MAX_PAGES * PAGE_SIZE;
 
 	struct vdso_data *vdso_data = (struct vdso_data *)page2kva(page);
 	vdso_data->pid = task->task_pid;
