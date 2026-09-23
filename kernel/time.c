@@ -55,3 +55,7 @@ void time_now(struct timeval *tv) {
 	tv->tv_sec = epoch_base + (time_t)(delta / ticks_per_sec);
 	tv->tv_usec = (suseconds_t)((delta % ticks_per_sec) * 1000 / tsc_khz);
 }
+
+uint64_t time_tsc_khz(void) { return tsc_khz; }
+uint64_t time_tsc_base(void) { return tsc_base; }
+time_t time_epoch_base(void) { return epoch_base; }

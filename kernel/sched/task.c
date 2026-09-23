@@ -13,6 +13,9 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <kernel/vma.h>
+#ifdef BONUS_VDSO
+#include <kernel/time.h>
+#endif
 
 
 pid_t pid_max = 1 << 16;
@@ -110,6 +113,9 @@ static int task_setup_vdso(struct task *task) {
 
 	struct vdso_data *vdso_data = (struct vdso_data *)page2kva(page);
 	vdso_data->pid = task->task_pid;
+	vdso_data->tsc_base = time_tsc_base();
+	vdso_data->tsc_khz = time_tsc_khz();
+	vdso_data->epoch_base = time_epoch_base();
 	
 	// It should have better error handling ... but assertions are fine for now
 	assert(page_insert(task->task_pml4, page, (void *)VVAR_BASE, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);

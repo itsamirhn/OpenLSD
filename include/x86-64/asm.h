@@ -263,9 +263,9 @@ static inline void outsl(uint16_t port, const void *addr, size_t n)
 
 static inline uint64_t read_tsc(void)
 {
-	uint64_t ret;
-	asm volatile("rdtsc" : "=A" (ret));
-	return ret;
+	uint32_t lo, hi;
+	asm volatile("rdtsc" : "=a" (lo), "=d" (hi));
+	return ((uint64_t)hi << 32) | lo;
 }
 
 static inline void swapgs(void)

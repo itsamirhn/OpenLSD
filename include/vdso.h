@@ -8,4 +8,7 @@
 
 struct vdso_data {
 	pid_t pid; // The PID of the task this page belongs to.
+	uint64_t tsc_base;
+	uint64_t tsc_khz;
+	int64_t  epoch_base;
 };
