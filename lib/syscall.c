@@ -7,6 +7,8 @@
 #include <vdso.h>
 #endif
 
+extern uintptr_t vdso_vvar_base;
+
 extern int64_t do_syscall(uint64_t a1, uint64_t a2,
 	uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6, uint64_t num);
 
@@ -63,12 +65,12 @@ void exit(int exitcode)
 pid_t getpid(void)
 {
 	#ifdef BONUS_VDSO
-	static pid_t (*vgetpid)(void);
+	static pid_t (*vgetpid)(const struct vdso_data *data);
 	if (!vgetpid) {
-		const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
+		const struct vdso_data *vdso_data = (const struct vdso_data *)vdso_vvar_base;
 		vgetpid = vdso_sym((void *)vdso_data->vdso_base, "__vdso_getpid");
 	}
-	if (vgetpid) return vgetpid();
+	if (vgetpid) return vgetpid((const struct vdso_data *)vdso_vvar_base);
 	#endif
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
 }
@@ -76,12 +78,12 @@ pid_t getpid(void)
 int gettimeofday(struct timeval *tv, void *tz)
 {
 	#ifdef BONUS_VDSO
-	static int (*vgettimeofday)(struct timeval *tv, void *tz);
+	static int (*vgettimeofday)(const struct vdso_data *data, struct timeval *tv, void *tz);
 	if (!vgettimeofday) {
-		const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
+		const struct vdso_data *vdso_data = (const struct vdso_data *)vdso_vvar_base;
 		vgettimeofday = vdso_sym((void *)vdso_data->vdso_base, "__vdso_gettimeofday");
 	}
-	if (vgettimeofday) return vgettimeofday(tv, tz);
+	if (vgettimeofday) return vgettimeofday((const struct vdso_data *)vdso_vvar_base, tv, tz);
 	#endif
 	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
 }

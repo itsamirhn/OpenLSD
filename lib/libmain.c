@@ -7,6 +7,7 @@
 extern int main(int argc, char **argv);
 
 const char *binary_name = "<unknown>";
+uintptr_t vdso_vvar_base;
 
 void libmain(int argc, char **argv)
 {

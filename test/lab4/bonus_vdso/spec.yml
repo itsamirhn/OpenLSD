@@ -9,7 +9,7 @@ regexlines:
   - '.VDSO. gettimeofday\(\) returned [0-9]+\.[0-9]+ without a syscall'
   - '0x00007ffffff[0-9a-f]+ - 0x00007ffffff[0-9a-f]+ .r-x. vdso'
   - '0x00007ffffff[0-9a-f]+ - 0x00007ffffff[0-9a-f]+ .r--. vdso'
-  - '0x00007fffffffc000 - 0x00007fffffffd000 .r--. vvar'
+  - '0x00007ffffff[0-9a-f]+ - 0x00007ffffff[0-9a-f]+ .r--. vvar'
   - '0x00007fffffffd000 - 0x00007fffffffe000 .rw-. stack'
   - '.VDSO. SYS_getpid reached the kernel 0 times, expected 0'
   - '.VDSO. SYS_gettimeofday reached the kernel 0 times, expected 0'

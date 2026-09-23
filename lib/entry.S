@@ -7,10 +7,13 @@
 .text
 .global _start
 _start:
+	movq %r12, vdso_vvar_base(%rip)
+
 	/* Check if we have any arguments on the stack. */
 	movabsq $USTACK_TOP, %rax
 	cmpq %rax, %rsp
 	jne args_exist
+	
 
 	/* If there are no arguments on the stack, we have to push dummy
 	 * argc/argv arguments. This happens when the program gets loaded
@@ -23,4 +26,3 @@ args_exist:
 	call libmain
 1:
 	jmp 1b
-

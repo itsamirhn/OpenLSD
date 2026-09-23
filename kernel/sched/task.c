@@ -142,7 +142,8 @@ static int task_setup_vdso(struct task *task) {
 	struct page_info *page = page_alloc(ALLOC_ZERO);
 	if (!page) return -ENOMEM;
 
-	uintptr_t vdso_base = VDSO_BASE - (read_tsc() % VDSO_RANDOM_SLOTS) * PAGE_SIZE;
+	uintptr_t vvar_base = VVAR_BASE - (read_tsc() % VDSO_RANDOM_SLOTS) * PAGE_SIZE;
+	uintptr_t vdso_base = vvar_base - VDSO_MAX_PAGES * PAGE_SIZE;
 
 	struct vdso_data *vdso_data = (struct vdso_data *)page2kva(page);
 	vdso_data->pid = task->task_pid;
@@ -152,8 +153,9 @@ static int task_setup_vdso(struct task *task) {
 	vdso_data->epoch_base = time_epoch_base();
 	
 	// It should have better error handling ... but assertions are fine for now
-	assert(page_insert(task->task_pml4, page, (void *)VVAR_BASE, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);
-	assert(add_anonymous_vma(task, "vvar", (void *)VVAR_BASE, PAGE_SIZE, VM_READ) != NULL);
+	assert(page_insert(task->task_pml4, page, (void *)vvar_base, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);
+	assert(add_anonymous_vma(task, "vvar", (void *)vvar_base, PAGE_SIZE, VM_READ) != NULL);
+	task->task_frame.r12 = vvar_base;
 
 	task_map_vdso(task, vdso_base);
 
