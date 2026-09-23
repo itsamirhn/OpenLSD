@@ -63,26 +63,21 @@ void exit(int exitcode)
 pid_t getpid(void)
 {
 	#ifdef BONUS_VDSO
-	const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
-	return vdso_data->pid;
-	#else
-	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
+	static pid_t (*vgetpid)(void);
+	if (!vgetpid) vgetpid = vdso_sym((void *)VDSO_BASE, "__vdso_getpid");
+	if (vgetpid) return vgetpid();
 	#endif
+	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
 }
 
 int gettimeofday(struct timeval *tv, void *tz)
 {
 	#ifdef BONUS_VDSO
-	if (!tv) return -EINVAL;
-	const struct vdso_data *vdso_data = (const struct vdso_data *)VVAR_BASE;
-	uint64_t delta = read_tsc() - vdso_data->tsc_base;
-	uint64_t ticks_per_sec = vdso_data->tsc_khz * 1000;
-	tv->tv_sec = vdso_data->epoch_base + (time_t)(delta / ticks_per_sec);
-	tv->tv_usec = (suseconds_t)((delta % ticks_per_sec) * 1000 / vdso_data->tsc_khz);
-	return 0;
-	#else
-	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
+	static int (*vgettimeofday)(struct timeval *tv, void *tz);
+	if (!vgettimeofday) vgettimeofday = vdso_sym((void *)VDSO_BASE, "__vdso_gettimeofday");
+	if (vgettimeofday) return vgettimeofday(tv, tz);
 	#endif
+	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
 }
 
 int mquery(struct vma_info *info, void *addr)

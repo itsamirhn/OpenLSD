@@ -52,6 +52,10 @@ int kill(pid_t);
 void exit(int);
 int gettimeofday(struct timeval *tv, void *tz);
 
+#ifdef BONUS_VDSO
+void *vdso_sym(void *base, const char *name);
+#endif
+
 
 int mquery(struct vma_info *info, void *addr);
 void *mmap(void *addr, size_t len, int prot, int flags, int fd,

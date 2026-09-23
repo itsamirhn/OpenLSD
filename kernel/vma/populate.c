@@ -51,7 +51,7 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 			physaddr_t *entry;
 			size_t page_size, offset, chunk;
 
-			page = page_lookup(task->task_pml4, (void *)cursor, &entry);
+			page = page_lookup(task->task_pml4,(void *)ROUNDDOWN(cursor, PAGE_SIZE), &entry);
 
 			if (!page) return -1;
 

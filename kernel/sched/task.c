@@ -106,6 +106,37 @@ static int task_setup_vas(struct task *task)
 }
 
 #ifdef BONUS_VDSO
+extern uint8_t vdso_blob_start[];
+extern uint8_t vdso_blob_end[];
+
+static int task_map_vdso(struct task *task) {
+	struct elf *ehdr = (struct elf *)vdso_blob_start;
+	struct elf_proghdr *phdr;
+	size_t i;
+
+	assert(ehdr->e_magic == ELF_MAGIC);
+
+	phdr = (struct elf_proghdr *)(vdso_blob_start + ehdr->e_phoff);
+
+	for (i = 0; i < ehdr->e_phnum; i++, phdr++) {
+		uintptr_t va, base, end;
+		int flags = VM_READ;
+
+		if (phdr->p_type != ELF_PROG_LOAD) continue;
+		if (phdr->p_flags & ELF_PROG_FLAG_EXEC) flags |= VM_EXEC;
+
+		va = VDSO_BASE + phdr->p_va;
+		base = ROUNDDOWN(va, PAGE_SIZE);
+		end = ROUNDUP(va + phdr->p_memsz, PAGE_SIZE);
+
+		assert(end <= VDSO_BASE + VDSO_MAX_PAGES * PAGE_SIZE);
+
+		assert(add_executable_vma(task, "vdso", (void *)base, end - base, flags, vdso_blob_start + phdr->p_offset, phdr->p_filesz, va - base) != NULL);
+	}
+
+	return 0;
+}
+
 static int task_setup_vdso(struct task *task) {
 
 	struct page_info *page = page_alloc(ALLOC_ZERO);
@@ -120,6 +151,8 @@ static int task_setup_vdso(struct task *task) {
 	// It should have better error handling ... but assertions are fine for now
 	assert(page_insert(task->task_pml4, page, (void *)VVAR_BASE, PAGE_PRESENT | PAGE_USER | PAGE_NO_EXEC) == 0);
 	assert(add_anonymous_vma(task, "vvar", (void *)VVAR_BASE, PAGE_SIZE, VM_READ) != NULL);
+
+	task_map_vdso(task);
 
 	return 0;
 }

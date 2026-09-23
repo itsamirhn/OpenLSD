@@ -247,6 +247,10 @@ include lib/Makefile
 # Include the tests-specific Makefile
 include test/Makefile
 
+ifneq ($(filter VDSO,$(BONUS)),)
+include vdso/Makefile
+endif
+
 # Include the kernel-specific Makefile
 include kernel/Makefile
 

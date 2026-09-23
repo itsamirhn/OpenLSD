@@ -13,3 +13,7 @@ KERNEL_SRCFILES += \
 	kernel/vma/syscall.c \
 	kernel/vma/user.c \
 	kernel/vma/walk.c
+
+ifneq ($(filter VDSO,$(BONUS)),)
+KERNEL_BINFILES += vdso/vdso_blob.o
+endif

@@ -60,6 +60,7 @@ struct elf_sym {
 
 /* Values for elf_prog_hdr::p_type */
 #define ELF_PROG_LOAD 1
+#define ELF_PROG_DYNAMIC 2
 
 /* Flag bits for elf_prog_hdr::p_flags */
 #define ELF_PROG_FLAG_EXEC  1
@@ -82,6 +83,7 @@ struct elf_sym {
 #define ELF_DYN_SYMTAB    6
 #define ELF_DYN_STRSIZE 0xA
 #define ELF_DYN_SYMSIZE 0xB
+#define ELF_DYN_HASH      4
 
 /* Flags for elf_sym::st_info */
 #define ELF_SYM_BIND(info) ((info) >> 4)
@@ -105,7 +107,6 @@ struct elf_sym {
 #ifdef BONUS_ASLR
 
 #define ELF_TYPE_DYN 3
-#define ELF_PROG_DYNAMIC 2
 #define ELF_DYN_RELA   7
 #define ELF_DYN_RELASZ 8
 

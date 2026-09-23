@@ -14,6 +14,10 @@ LIB_SRCFILES := \
 LIB_SRCFILES += \
 	lib/vma.c
 
+ifneq ($(filter VDSO,$(BONUS)),)
+LIB_SRCFILES += lib/vdso.c
+endif
+
 LIB_OBJFILES := $(patsubst lib/%.c, $(OBJDIR)/lib/%.o, $(LIB_SRCFILES))
 LIB_OBJFILES := $(patsubst lib/%.S, $(OBJDIR)/lib/%.o, $(LIB_OBJFILES))
 
