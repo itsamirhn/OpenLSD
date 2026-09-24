@@ -1,12 +1,14 @@
 # LAB 4 bonus
 ## VDSO
 
-We have chosen to compile the user facing part of vDSO, so we would have an ELF file that is easily relocatable. We have implemented getpid() and gettimeofday(). We also have decided to make the mapping of the vvar page independent of the vDSO pages. Because we are making use of a ELF file, vdso_sym() was implemented, which returns a function pointer for a given ELF file and function name. Thus the function walks the ELF file until it find the requested function. It looks for a ELF_PROG_DYNAMIC program header and then it searches the ELF_DYN_SYMTAB, ELF_DYN_STRTAB and ELF_DYN_HASH. After which we can strncmp the symbols. In the lib/syscall.c we search for the vdso symbol and then call it. The functions are situated in vdso/vdso.c. 
+We have chosen to compile the user facing part of vDSO, so we would have an ELF file that is easily relocatable. We have implemented getpid() and gettimeofday(). Because we are making use of a ELF file, vdso_sym() was implemented, which returns a function pointer for a given ELF file and function name. Thus the function walks the ELF file until it find the requested function. It looks for a ELF_PROG_DYNAMIC program header and then it searches the ELF_DYN_SYMTAB, ELF_DYN_STRTAB and ELF_DYN_HASH. After which we can strncmp the symbols. In the lib/syscall.c we search for the vdso symbol and then call it. The functions are situated in vdso/vdso.c. 
 
 The kernel passes the vvar page pointer via the R12 register to the user task, which at the start then stores in vdso_vvar_base. This pointer is passed then in lib/syscall.c to the vdso functions which can get the required data from it.
 In task_setup_vdso() the vvar page is initialised, then in task_map_vdso() the vdso ELF object file is mapped in to the process.
 
 The entropy for the randomization of the location is 2^6.
+
+The tests that have regex lines for free memory regions do not match because of the presense of the vDSO and vvar pages. And vma_lazy because of the loaded data page.
 
 ------------------------------------------------
 # LAB 3 bonus
