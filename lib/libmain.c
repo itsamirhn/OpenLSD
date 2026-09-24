@@ -7,7 +7,9 @@
 extern int main(int argc, char **argv);
 
 const char *binary_name = "<unknown>";
+#ifdef BONUS_VDSO
 uintptr_t vdso_vvar_base;
+#endif
 
 void libmain(int argc, char **argv)
 {
@@ -22,4 +24,3 @@ void libmain(int argc, char **argv)
 	/* Exit gracefully. */
 	exit(rstatus);
 }
-

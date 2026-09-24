@@ -7,7 +7,9 @@
 .text
 .global _start
 _start:
+#ifdef BONUS_VDSO
 	movq %r12, vdso_vvar_base(%rip)
+#endif
 
 	/* Check if we have any arguments on the stack. */
 	movabsq $USTACK_TOP, %rax

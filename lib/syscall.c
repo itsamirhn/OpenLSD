@@ -5,9 +5,8 @@
 #include <lib.h>
 #ifdef BONUS_VDSO
 #include <vdso.h>
-#endif
-
 extern uintptr_t vdso_vvar_base;
+#endif
 
 extern int64_t do_syscall(uint64_t a1, uint64_t a2,
 	uint64_t a3, uint64_t a4, uint64_t a5, uint64_t a6, uint64_t num);
