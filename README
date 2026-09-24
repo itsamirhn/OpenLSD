@@ -1,12 +1,16 @@
 # LAB 4 bonus
 ## VDSO
 
-We have chosen to compile the user facing part of vDSO, so we would have an ELF file that is easily relocatable. We have implemented getpid() and gettimeofday(). Because we are making use of a ELF file, vdso_sym() was implemented, which returns a function pointer for a given ELF file and function name. Thus the function walks the ELF file until it find the requested function. It looks for a ELF_PROG_DYNAMIC program header and then it searches the ELF_DYN_SYMTAB, ELF_DYN_STRTAB and ELF_DYN_HASH. After which we can strncmp the symbols. In the lib/syscall.c we search for the vdso symbol and then call it. The functions are situated in vdso/vdso.c. 
+Our vDSO started out very simple. The kernel mapped a single read-only "vvar" page at a fixed address just below the user stack, wrote the task's PID into it, and getpid() in our libc simply read it back without entering the kernel.
+After implemnting gettimeofday() using RTC, we did the same with other needed variables by exporting the kernel's TSC base, TSC frequency and boot epoch into vvar, so user space can compute the current time on its own with rdtsc.
 
-The kernel passes the vvar page pointer via the R12 register to the user task, which at the start then stores in vdso_vvar_base. This pointer is passed then in lib/syscall.c to the vdso functions which can get the required data from it.
-In task_setup_vdso() the vvar page is initialised, then in task_map_vdso() the vdso ELF object file is mapped in to the process.
+Next we moved the code out of libc into a real vDSO, so vdso/vdso.c is now built as a small position-independent shared object, embedded in the kernel as a binary blob, and task_map_vdso() maps its loadable segments (we consider it will be at most 3 pages) into every new task.
+Because the vDSO is now its own ELF, libc has to find its functions by name, so vdso_sym() walks the vDSO's dynamic symbol table and returns a function pointer.
+Each wrapper in lib/syscall.c does this lookup only on the first call and caches the pointer in a static variable, much like a lazily bound GOT/PLT entry, and falls back to the normal syscall if the symbol cannot be found.
 
-The entropy for the randomization of the location is 2^6.
+Once nothing depended on fixed addresses anymore, we randomized the location. The vvar page is placed in one of 2^6 page slots below the stack and the vDSO sits directly underneath it.
+We briefly randomized the two independently, but that allowed them to overlap, so they now move together. Since vvar no longer has a known address, the kernel passes it to the new task in R12 (the original linux way is to pass it as AUX variables, but any unused register would work as well), lib/entry.S stores it in vdso_vvar_base, and the wrappers hand it to the vDSO functions.
+The vDSO base itself is stored inside vvar so libc knows where to look up symbols. So it is mostly just a shared read-only page plus a bit of dynamic linking, and that getting rid of hardcoded addresses is what makes randomizing them possible in the first place.
 
 The tests that have regex lines for free memory regions do not match because of the presense of the vDSO and vvar pages. And vma_lazy because of the loaded data page.
 
