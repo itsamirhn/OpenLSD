@@ -1,3 +1,14 @@
+# LAB 4 bonus
+## VDSO
+
+We have chosen to compile the user facing part of vDSO, so we would have an ELF file that is easily relocatable. We have implemented getpid() and gettimeofday(). We also have decided to make the mapping of the vvar page independent of the vDSO pages. Because we are making use of a ELF file, vdso_sym() was implemented, which returns a function pointer for a given ELF file and function name. Thus the function walks the ELF file until it find the requested function. It looks for a ELF_PROG_DYNAMIC program header and then it searches the ELF_DYN_SYMTAB, ELF_DYN_STRTAB and ELF_DYN_HASH. After which we can strncmp the symbols. In the lib/syscall.c we search for the vdso symbol and then call it. The functions are situated in vdso/vdso.c. 
+
+The kernel passes the vvar page pointer via the R12 register to the user task, which at the start then stores in vdso_vvar_base. This pointer is passed then in lib/syscall.c to the vdso functions which can get the required data from it.
+In task_setup_vdso() the vvar page is initialised, then in task_map_vdso() the vdso ELF object file is mapped in to the process.
+
+The entropy for the randomization of the location is 2^6.
+
+------------------------------------------------
 # LAB 3 bonus
 
 
@@ -21,6 +32,7 @@ For mitigating this, we have to invert the PTE, and not just them 0'ing them out
 Other tests, check that the PTE are 0, which is why they fail when they run with this bonus turned one, as that is not the case anymore with the mitigation.
 
 
+------------------------------------------------
 # LAB 2 bonuses
 
 The use after free and the out of bounds tests rely on how the pages are mapped, which cause a page fault on their access. Because interrupts are scheduled for lab 3, these tests triple fault for now. And thus no kernel panic can be issued as the test framework requires. For that we put another cprintf() after the line that should page fault, if that gets printed means that the test failed as it did not page fault.
