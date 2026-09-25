@@ -22,6 +22,7 @@ struct task *task_clone(struct task *task)
 
 pid_t sys_fork(void)
 {
-	/* LAB 5: your code here. */
-	return -ENOSYS;
+	struct task *task = task_clone(cur_task);
+	if (!task) return -ENOMEM;
+	return task->task_pid;
 }
