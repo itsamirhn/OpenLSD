@@ -1,0 +1,6 @@
+name: Forking - Stress
+description: This asserts that a large number of processes can be spawned and
+  terminated without breaking the system.
+points: 0.5
+
+qemu: -m 2G
