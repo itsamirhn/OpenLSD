@@ -23,7 +23,14 @@ void sched_init(void)
 /* Runs the next runnable task. */
 void sched_yield(void)
 {
-	/* LAB 5: your code here. */
+	if (!list_is_empty(&runq)) 
+		return task_run(container_of(list_pop(&runq), struct task, task_node));
+	
+	if (cur_task && cur_task->task_status == TASK_RUNNING)
+		return task_run(cur_task);
+
+	cprintf("No runnable tasks!\n");
+	halt_kernel();
 }
 
 /* For now jump into the kernel monitor. */
