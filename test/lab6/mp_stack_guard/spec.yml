@@ -1,0 +1,4 @@
+name: Stack - Multi-Processor Stack Uniqueness and Guard Pages
+description: This test checks whether there is a guard page between per-cpu kernel stacks and whether each CPU has a unique kernel stack.
+
+qemu: -smp 64

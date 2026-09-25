@@ -1,0 +1,4 @@
+name: Stack - Check Multi-Processor Stack Permissions
+description: This test checks that each CPU has its own kernel stack set up correctly with appropriate permissions.
+
+qemu: -smp 64
