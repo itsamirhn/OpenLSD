@@ -31,3 +31,8 @@ void sched_halt()
 {
 	halt_kernel();
 }
+
+void sched_enqueue(struct task *task) {
+	task->task_status = TASK_RUNNABLE;
+	list_add_tail(&runq, &task->task_node); 
+}

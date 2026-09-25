@@ -216,16 +216,20 @@ struct task *task_alloc(pid_t ppid)
 	task->task_frame.cs = GDT_UCODE | 3;
 
 
-	/* You will set task->task_frame.rip later. */
-	cprintf("[PID %5u] New task with PID %u\n",
-	        cur_task ? cur_task->task_pid : 0, task->task_pid);
-
-	list_init(&task->task_mmap);
 	rb_init(&task->task_rb);
+	list_init(&task->task_mmap);
+	list_init(&task->task_children);
+	list_init(&task->task_child);
+	list_init(&task->task_zombies);
+	list_init(&task->task_node);
 
 	#ifdef BONUS_VDSO
 	assert(task_setup_vdso(task) == 0);
 	#endif
+
+	/* You will set task->task_frame.rip later. */
+	cprintf("[PID %5u] New task with PID %u\n",
+	        cur_task ? cur_task->task_pid : 0, task->task_pid);
 
 	return task;
 }
@@ -358,8 +362,8 @@ void task_create(uint8_t *binary, enum task_type type)
 	task_load_elf(task, binary);
 	
 	if (type == TASK_TYPE_USER) nuser_tasks++;
-	/* LAB 5: modify your code here. */
-
+	
+	sched_enqueue(task);
 }
 
 /* Free the task and all of the memory that is used by it.
@@ -449,7 +453,7 @@ void task_run(struct task *task)
 	 *  e->task_frame to sensible values.
 	 */
 	if (cur_task != task) {	
-		if (cur_task && cur_task->task_status == TASK_RUNNING) cur_task->task_status = TASK_RUNNABLE;
+		if (cur_task && cur_task->task_status == TASK_RUNNING) sched_enqueue(cur_task);
 		cur_task = task;
 		cur_task->task_status = TASK_RUNNING;
 		cur_task->task_runs++;
