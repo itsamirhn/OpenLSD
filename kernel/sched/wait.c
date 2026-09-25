@@ -9,8 +9,7 @@
 
 pid_t sys_wait(int *rstatus)
 {
-	/* LAB 5: your code here. */
-	return -ENOSYS;
+	return sys_waitpid(-1, rstatus, 0);
 }
 
 pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
