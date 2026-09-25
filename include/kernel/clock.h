@@ -1,9 +1,9 @@
 #pragma once
 
-#include <time.h>
+#include <lib.h>
 
 void time_init(void);
-void time_now(struct timeval *tv);
+void time_now(struct timespec *tv);
 
 uint64_t time_tsc_khz(void);
 uint64_t time_tsc_base(void);

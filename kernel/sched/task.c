@@ -14,7 +14,7 @@
 #include <kernel/sched.h>
 #include <kernel/vma.h>
 #ifdef BONUS_VDSO
-#include <kernel/time.h>
+#include <kernel/clock.h>
 #endif
 
 

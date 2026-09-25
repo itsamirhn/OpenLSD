@@ -74,15 +74,15 @@ pid_t getpid(void)
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
 }
 
-int gettimeofday(struct timeval *tv, void *tz)
+int gettimeofday(struct timespec *tv)
 {
 	#ifdef BONUS_VDSO
-	static int (*vgettimeofday)(const struct vdso_data *data, struct timeval *tv, void *tz);
+	static int (*vgettimeofday)(const struct vdso_data *data, struct timespec *tv);
 	if (!vgettimeofday) {
 		const struct vdso_data *vdso_data = (const struct vdso_data *)vdso_vvar_base;
 		vgettimeofday = vdso_sym((void *)vdso_data->vdso_base, "__vdso_gettimeofday");
 	}
-	if (vgettimeofday) return vgettimeofday((const struct vdso_data *)vdso_vvar_base, tv, tz);
+	if (vgettimeofday) return vgettimeofday((const struct vdso_data *)vdso_vvar_base, tv);
 	#endif
 	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
 }

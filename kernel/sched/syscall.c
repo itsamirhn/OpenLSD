@@ -11,7 +11,7 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <kernel/vma/syscall.h>
-#include <kernel/time.h>
+#include <kernel/clock.h>
 
 extern void syscall64(void);
 
@@ -75,7 +75,7 @@ static pid_t sys_getpid(void)
 	return cur_task->task_pid;
 }
 
-static int sys_gettimeofday(struct timeval *tv, void *tz) {
+static int sys_gettimeofday(struct timespec *tv) {
 	if (!tv) return -EINVAL;
 
 	assert_user_mem(cur_task, tv, sizeof *tv, PROT_WRITE);
@@ -136,7 +136,7 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 		case SYS_getpid:
 			return sys_getpid();
 		case SYS_gettimeofday:
-			return sys_gettimeofday((struct timeval *)a1, (void *)a2);
+			return sys_gettimeofday((struct timespec *)a1);
 		case SYS_kill:
 			return sys_kill((pid_t)a1);
 		case SYS_exit:

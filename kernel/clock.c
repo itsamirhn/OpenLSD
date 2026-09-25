@@ -1,10 +1,10 @@
 #include <types.h>
 #include <assert.h>
 #include <stdio.h>
-#include <time.h>
+#include <lib.h>
 
 #include <x86-64/asm.h>
-#include <kernel/time.h>
+#include <kernel/clock.h>
 
 #define RTC_INDEX 0x70
 #define RTC_DATA  0x71
@@ -48,12 +48,12 @@ void time_init(void) {
 	epoch_base = 0;
 }
 
-void time_now(struct timeval *tv) {
+void time_now(struct timespec *tv) {
 	uint64_t delta = read_tsc() - tsc_base;
 	uint64_t ticks_per_sec = tsc_khz * 1000;
 
 	tv->tv_sec = epoch_base + (time_t)(delta / ticks_per_sec);
-	tv->tv_usec = (suseconds_t)((delta % ticks_per_sec) * 1000 / tsc_khz);
+	tv->tv_nsec = (long)((delta % ticks_per_sec) * 1000000 / tsc_khz);
 }
 
 uint64_t time_tsc_khz(void) { return tsc_khz; }

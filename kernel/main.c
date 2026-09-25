@@ -16,7 +16,7 @@
 #include <kernel/test/probe.h>
 #include <kernel/test/test.h>
 #include <kernel/symbols.h>
-#include <kernel/time.h>
+#include <kernel/clock.h>
 
 
 uint8_t *find_user_binary() {

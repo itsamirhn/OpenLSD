@@ -1,6 +1,6 @@
 # LAB 4 code
 KERNEL_SRCFILES += \
-	kernel/time.c \
+	kernel/clock.c \
 	kernel/vma/find.c \
 	kernel/vma/insert.c \
 	kernel/vma/merge.c \
