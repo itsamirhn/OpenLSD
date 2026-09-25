@@ -88,6 +88,8 @@ static int sys_gettimeofday(struct timeval *tv, void *tz) {
 static int sys_kill(pid_t pid)
 {
 	struct task *task;
+	/* LAB 5: your code here. */
+
 	task = pid2task(pid, 1);
 
 	if (!task) {
@@ -104,6 +106,8 @@ static int sys_kill(pid_t pid)
 static int sys_exit(int rcode)
 {
 	struct task *task = cur_task;
+
+	/* LAB 5: your code here. */
 
 	cprintf("[PID %5u] Exiting gracefully with code %d\n", task->task_pid, rcode);
 

@@ -29,4 +29,5 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 	}
 
 	return populate_vma_range(task, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE),PAGE_SIZE, vma_flags);
+
 }

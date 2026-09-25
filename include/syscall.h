@@ -13,5 +13,9 @@ enum {
 	SYS_mprotect,
 	SYS_madvise,
 	SYS_gettimeofday,
+	SYS_yield,
+	SYS_wait,
+	SYS_waitpid,
+	SYS_fork,
 	NSYSCALLS,
 };

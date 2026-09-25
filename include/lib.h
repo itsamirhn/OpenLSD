@@ -14,6 +14,19 @@
 
 #include <x86-64/memory.h>
 
+typedef long long time_t;
+
+struct tm {
+	int tm_sec, tm_min, tm_hour;
+	int tm_mday, tm_mon, tm_year;
+	int tm_wday, tm_yday;
+	int tm_isdst;
+};
+
+struct timespec {
+	time_t tv_sec;
+	long tv_nsec;
+};
 
 enum {
 	VMA_FREE = 0,
@@ -88,6 +101,15 @@ int madvise(void *addr, size_t len, int advise);
 
 #define MADV_WILLNEED 1
 #define MADV_DONTNEED 2
+
+
+void sched_yield(void);
+pid_t wait(int *rstatus);
+pid_t waitpid(pid_t pid, int *rstatus, int opts);
+pid_t fork(void);
+
+/* time.c */
+time_t tm_to_time(struct tm *tm);
 
 /* vma.c */
 void print_vmas(void);
