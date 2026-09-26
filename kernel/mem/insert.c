@@ -1,6 +1,7 @@
 
 #include <types.h>
 #include <paging.h>
+#include <error.h>
 
 #include <kernel/mem.h>
 
@@ -123,7 +124,7 @@ int page_insert(struct page_table *pml4, struct page_info *page, void *va,
 		.udata = &info,
 	};
 	
-	if (!(flags & PAGE_PRESENT)) return -1;
+	if (!(flags & PAGE_PRESENT)) return -EINVAL;
 
 	if (page->pp_order == BUDDY_2M_PAGE && hpage_aligned((uintptr_t)va)) {
 		return walk_page_range(pml4, va, va + HPAGE_SIZE, &walker);
@@ -132,17 +133,17 @@ int page_insert(struct page_table *pml4, struct page_info *page, void *va,
 		walker.pde_unmap = ptbl_merge;
 		return walk_page_range(pml4, va, va + PAGE_SIZE, &walker);
 	}
-	return -1;
+	return -EINVAL;
 }
 
 int page_insert_guarded(struct page_table *pml4, struct page_info *page, void *va,
 	uint64_t flags)
 {
-	if (page_lookup(pml4, va - PAGE_SIZE, NULL)) return -1;
-	if (page_lookup(pml4, va + PAGE_SIZE, NULL)) return -1;
+	if (page_lookup(pml4, va - PAGE_SIZE, NULL)) return -EFAULT;
+	if (page_lookup(pml4, va + PAGE_SIZE, NULL)) return -EFAULT;
 	 if (page->pp_order == BUDDY_2M_PAGE ) {
-		if (page_lookup(pml4, va - HPAGE_SIZE, NULL)) return -1;
-		if (page_lookup(pml4, va + HPAGE_SIZE, NULL)) return -1;
+		if (page_lookup(pml4, va - HPAGE_SIZE, NULL)) return -EFAULT;
+		if (page_lookup(pml4, va + HPAGE_SIZE, NULL)) return -EFAULT;
 	}
 
 	return page_insert(pml4, page, va, flags);
