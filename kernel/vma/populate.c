@@ -43,8 +43,8 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 	if ((*vma)->vm_src && (*vma)->vm_len) {
 		uintptr_t data_base = (uintptr_t)(*vma)->vm_base + (*vma)->vm_offset;
 		uintptr_t data_end = data_base + (*vma)->vm_len;
-		uintptr_t cursor = start > data_base ? start : data_base;
-		uintptr_t stop = end < data_end ? end : data_end;
+		uintptr_t cursor = MAX(start, data_base);
+		uintptr_t stop = MIN(end, data_end);
 
 		while (cursor < stop) {
 			struct page_info *page;
@@ -57,7 +57,7 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 
 			page_size = (*entry & PAGE_HUGE) ? HPAGE_SIZE : PAGE_SIZE;
 			offset = cursor & (page_size - 1);
-			chunk = page_size - offset > stop - cursor ? stop - cursor : page_size - offset;
+			chunk = MIN(page_size - offset, stop - cursor);
 
 			memcpy((char *)page2kva(page) + offset, (char *)(*vma)->vm_src + (cursor - data_base), chunk);
 
