@@ -45,7 +45,7 @@ struct task *task_clone(struct task *task)
 	struct list *node;
 	list_foreach(&task->task_mmap, node) {
 		struct vma *vma = container_of(node, struct vma, vm_mmap);
-		assert(add_executable_vma(child, vma->vm_name, vma->vm_base, vma->vm_end - vma->vm_base,vma->vm_flags, vma->vm_src, vma->vm_len, vma->vm_offset) == 0);
+		assert(add_executable_vma(child, vma->vm_name, vma->vm_base, vma->vm_end - vma->vm_base,vma->vm_flags, vma->vm_src, vma->vm_len, vma->vm_offset) != NULL);
 	}
 
 	assert(walk_user_pages(task->task_pml4, &(struct page_walker) {
@@ -64,5 +64,10 @@ pid_t sys_fork(void)
 {
 	struct task *task = task_clone(cur_task);
 	if (!task) return -ENOMEM;
+
+	task->task_frame.rax = 0;
+
+	sched_enqueue(task);
+
 	return task->task_pid;
 }
