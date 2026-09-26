@@ -66,6 +66,7 @@ pid_t sys_fork(void)
 	if (!task) return -ENOMEM;
 
 	task->task_frame.rax = 0;
+	list_add(&cur_task->task_children, &task->task_child);
 
 	sched_enqueue(task);
 
