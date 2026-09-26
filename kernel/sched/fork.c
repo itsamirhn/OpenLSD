@@ -8,6 +8,29 @@
 #include <kernel/sched.h>
 #include <kernel/vma.h>
 
+struct cow_info {
+	struct page_table *pml4;
+	struct page_table *child_pml4;
+};
+
+static int cow_share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker) {
+	struct cow_info *info = walker->udata;
+
+	if (!(*entry & PAGE_PRESENT)) return 0;
+
+	if (*entry & PAGE_WRITE) {
+		*entry &= ~PAGE_WRITE;
+		tlb_invalidate(info->pml4, (void *)base);
+	}
+
+	return page_insert(info->child_pml4, pa2page(PAGE_ADDR(*entry)), (void *)base, *entry & PAGE_UMASK);
+}
+
+static int cow_share_pde(physaddr_t *entry, uintptr_t pde_base, uintptr_t pde_end, struct page_walker *walker) {
+	if (!(*entry & PAGE_HUGE)) return 0;
+	return cow_share_pte(entry, pde_base, pde_end, walker);
+}
+
 /* Allocates a task struct for the child process and copies the register state,
  * the VMAs and the page tables. Once the child task has been set up, it is
  * added to the run queue.
@@ -19,8 +42,20 @@ struct task *task_clone(struct task *task)
 
 	memcpy(&child->task_frame, &task->task_frame, sizeof child->task_frame);
 
-	/* LAB 5: your code here. */
-	// Need to copy the VMAs
+	struct list *node;
+	list_foreach(&task->task_mmap, node) {
+		struct vma *vma = container_of(node, struct vma, vm_mmap);
+		assert(add_executable_vma(child, vma->vm_name, vma->vm_base, vma->vm_end - vma->vm_base,vma->vm_flags, vma->vm_src, vma->vm_len, vma->vm_offset) == 0);
+	}
+
+	assert(walk_user_pages(task->task_pml4, &(struct page_walker) {
+		.pte_callback = cow_share_pte,
+		.pde_callback = cow_share_pde,
+		.udata = &(struct cow_info) {
+			.pml4 = task->task_pml4,
+			.child_pml4 = child->task_pml4
+		}
+	}) == 0);
 
 	return child;
 }
