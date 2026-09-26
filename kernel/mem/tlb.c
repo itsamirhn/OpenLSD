@@ -11,7 +11,6 @@
  */
 void tlb_invalidate(struct page_table *pml4, void *va)
 {
-	if (pml4 == NULL || PADDR(pml4) == read_cr3()) flush_page(va);
 	/* Flush the entry only if we are modifying the current address space. */
-	/* LAB 5: update your code here */ // already done!
+	if (pml4 == NULL || PADDR(pml4) == read_cr3()) flush_page(va);
 }
