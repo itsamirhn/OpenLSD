@@ -107,7 +107,8 @@ static int sys_exit(int rcode)
 {
 	struct task *task = cur_task;
 
-	/* LAB 5: your code here. */
+	if (!task) return -1;
+	task->task_exit_status = rcode;
 
 	cprintf("[PID %5u] Exiting gracefully with code %d\n", task->task_pid, rcode);
 

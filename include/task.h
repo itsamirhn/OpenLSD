@@ -71,4 +71,7 @@ struct task {
 
 	/* The anchor node (for zombies or the run queue) */
 	struct list task_node;
+
+	/* Where to store the exit status of the task we are waiting on. */
+	int *task_rstatus;
 };

@@ -414,6 +414,13 @@ void task_destroy(struct task *task)
 	if (!list_is_empty(&task->task_child)) {
 		struct task *parent = pid2task(task->task_ppid, 0);
 		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
+			if (parent->task_rstatus) {
+				// rstatus lives in the parent's address space
+				physaddr_t cr3 = read_cr3();
+				load_pml4(PADDR(parent->task_pml4));
+				*parent->task_rstatus = task->task_exit_status;
+				load_pml4(cr3);
+			}
 			parent->task_frame.rax = task->task_pid;
 			sched_enqueue(parent);
 			task_free(task);

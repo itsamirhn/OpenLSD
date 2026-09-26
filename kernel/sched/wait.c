@@ -16,6 +16,8 @@ pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
 {
 	struct list	*node;
 
+	if (rstatus) assert_user_mem(cur_task, rstatus, sizeof *rstatus, PROT_WRITE);
+
 	list_foreach(&cur_task->task_zombies, node) {
 		struct task *task = container_of(node, struct task, task_node);
 		if (pid > 0 && task->task_pid != pid) continue;
@@ -30,6 +32,7 @@ pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
 		if (pid > 0 && task->task_pid != pid) continue;
 		cur_task->task_wait = pid > 0 ? task : NULL;
 		cur_task->task_status = TASK_NOT_RUNNABLE;
+		cur_task->task_rstatus = rstatus;
 		sched_yield();
 	}
 
