@@ -81,7 +81,7 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	}
 
 	for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) {
-		struct page_info *p = page_alloc(ALLOC_ZERO); if (ptbl_page == NULL) return -ENOMEM;
+		struct page_info *p = page_alloc(ALLOC_ZERO); if (p == NULL) return -ENOMEM;
 		p->pp_ref++;
 		memcpy(page2kva(p), page2kva(huge_page) + (i * PAGE_SIZE), PAGE_SIZE);
 		ptbl->entries[i] = page2pa(p) | flags;
