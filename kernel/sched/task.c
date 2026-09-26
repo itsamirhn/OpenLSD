@@ -402,10 +402,10 @@ void task_free(struct task *task)
 void task_destroy(struct task *task)
 {
 	task_free(task);
-	/* LAB 5: your code here. */
+	
+	if (task == cur_task) cur_task = NULL;
 
-	cprintf("Destroyed the only task - nothing more to do!\n");
-	halt_kernel();
+	sched_yield();
 }
 
 /*
