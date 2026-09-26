@@ -371,7 +371,7 @@ void task_create(uint8_t *binary, enum task_type type)
 void task_free(struct task *task)
 {
 	struct task *waiting;
-	/* LAB 5: your code here. */
+
 	/* If we are freeing the current task, switch to the kernel_pml4
 	 * before freeing the page tables, just in case the page gets re-used.
 	 */
@@ -381,6 +381,14 @@ void task_free(struct task *task)
 
 	/* Unmap the task from the PID map. */
 	tasks[task->task_pid] = NULL;
+
+	while (!list_is_empty(&task->task_zombies)) 
+		task_free(container_of(list_pop(&task->task_zombies), struct task, task_node));
+
+	while (!list_is_empty(&task->task_children)) list_pop(&task->task_children);
+
+	list_del(&task->task_child);
+	list_del(&task->task_node);
 
 	/* Unmap the user pages. */
 	unmap_user_pages(task->task_pml4);
@@ -401,8 +409,20 @@ void task_free(struct task *task)
  */
 void task_destroy(struct task *task)
 {
-	task_free(task);
-	
+	list_del(&task->task_node);
+
+	if (!list_is_empty(&task->task_child)) {
+		struct task *parent = pid2task(task->task_ppid, 0);
+		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
+			parent->task_frame.rax = task->task_pid;
+			sched_enqueue(parent);
+			task_free(task);
+		} else {
+			task->task_status = TASK_DYING;
+			list_add(&parent->task_zombies, &task->task_node);
+		}
+	} else task_free(task);
+
 	if (task == cur_task) cur_task = NULL;
 
 	sched_yield();
