@@ -37,6 +37,7 @@ DECL_ISR(17);
 DECL_ISR(18);
 DECL_ISR(19);
 DECL_ISR(30);
+DECL_ISR(32);
 DECL_ISR(127);
 DECL_ISR(128);
 
@@ -177,10 +178,12 @@ void idt_init(void)
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[INT_SECURITY], isr30,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+	set_idt_entry(&entries[IRQ_TIMER], isr32,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[INT_PANIC], isr127,
 		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	set_idt_entry(&entries[INT_SYSCALL], isr128,
-		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
+		IDT_INT_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	load_idt(&idtr);
 }
 
@@ -202,6 +205,10 @@ void int_dispatch(struct int_frame *frame)
 			return;
 		case INT_PAGE_FAULT:
 			page_fault_handler(frame);
+			return;
+		case IRQ_TIMER:
+			lapic_eoi();
+			sched_yield();
 			return;
 		case INT_SYSCALL:
 		#ifdef BONUS_SYSCALL

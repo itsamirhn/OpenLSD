@@ -214,6 +214,7 @@ struct task *task_alloc(pid_t ppid)
 	task->task_frame.ss = GDT_UDATA | 3;
 	task->task_frame.rsp = USTACK_TOP;
 	task->task_frame.cs = GDT_UCODE | 3;
+	task->task_frame.rflags = FLAGS_IF; // enable interrupts
 
 
 	rb_init(&task->task_rb);

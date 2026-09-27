@@ -88,14 +88,12 @@ static int sys_gettimeofday(struct timespec *tv) {
 static int sys_kill(pid_t pid)
 {
 	struct task *task;
-	/* LAB 5: your code here. */
 
 	task = pid2task(pid, 1);
 
 	if (!task) {
 		return -1;
 	}
-
 
 	cprintf("[PID %5u] Exiting gracefully\n", task->task_pid);
 	task_destroy(task);

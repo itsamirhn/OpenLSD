@@ -23,6 +23,7 @@ pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
 		if (pid > 0 && task->task_pid != pid) continue;
 		if (rstatus) *rstatus = task->task_exit_status;
 		pid = task->task_pid;
+		cprintf("[PID %5u] Reaping task with PID %u\n", cur_task->task_pid, task->task_pid);
 		task_free(task);
 		return pid;
 	}
