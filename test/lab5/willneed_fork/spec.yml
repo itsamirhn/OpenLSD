@@ -1,0 +1,4 @@
+name: VMA - Advise Will Need after fork
+
+matchlines:
+  - "[PID     1] Exiting gracefully with code 0"
