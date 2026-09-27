@@ -201,7 +201,12 @@ int sys_madvise(void *addr, size_t len, int advise)
 		return -EINVAL;
 	}
 	if (advise == MADV_WILLNEED) {
-		return populate_vma_range(cur_task, (void *)start, end - start, 0);
+		int ret = 0;
+		for (uintptr_t p = start; p < end; p += PAGE_SIZE) if (page_lookup(cur_task->task_pml4, (void *)p, NULL) == NULL) {
+			ret = task_page_fault_handler(cur_task, (void *)p, 0);
+			if (ret < 0) return ret;
+		}
+		return 0;
 	}else if (advise == MADV_DONTNEED) {
 		return unmap_clean_pages_range(cur_task, (void *)start, end - start);
 	}

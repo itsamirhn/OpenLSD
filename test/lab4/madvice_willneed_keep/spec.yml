@@ -1,0 +1,4 @@
+name: VMA - Advise Will Need keeps written data
+
+matchlines:
+  - "[PID     1] Exiting gracefully with code 0"
