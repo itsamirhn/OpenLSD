@@ -132,6 +132,7 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		struct page_info *p = pa2page(PAGE_ADDR(ptbl->entries[i]));
 		if (p->pp_avail == 0) return 0;
 		if (p->pp_order != BUDDY_4K_PAGE) return 0;
+		if (p->pp_ref > 1) return 0; // shared page like CoW, merging would copy it
 	}
 
 	struct page_info *huge_page = page_alloc(ALLOC_ZERO | ALLOC_HUGE); if (huge_page == NULL) return -ENOMEM;

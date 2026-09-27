@@ -5,6 +5,20 @@
 #include <kernel/mem.h>
 #include <kernel/vma.h>
 
+#ifdef BONUS_ZERO_DEDUP
+static struct page_info *zero_page = NULL;
+
+static int task_zero_fault(struct task *task, struct vma *vma, void *va) {
+	if (zero_page == NULL) {
+		zero_page = page_alloc(ALLOC_ZERO);
+		if (!zero_page) return -ENOMEM;
+		zero_page->pp_ref++; // Trick to avoid COW change this page in future
+	}
+
+	return page_insert(task->task_pml4, zero_page, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE), PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC));
+}
+#endif
+
 static int task_cow_fault(struct task *task, void *va) {
 	physaddr_t *entry = NULL;
 	struct page_info *page = page_lookup(task->task_pml4, va, &entry); if (!page) return -EFAULT;
@@ -47,6 +61,11 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 	if ((vma->vm_flags & vma_flags) != vma_flags) return -EPERM;
 
 	if ((flags & PF_PRESENT) && (flags & PF_WRITE)) return task_cow_fault(task, va);
+
+	#ifdef BONUS_ZERO_DEDUP
+	// Only read or exec should be catched here. write will get handled by populate_vma_range
+	if (!(flags & PF_PRESENT) && !(flags & PF_WRITE) && !vma->vm_src) return task_zero_fault(task, vma, va);
+	#endif
 
 	return populate_vma_range(task, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE),PAGE_SIZE, vma_flags);
 

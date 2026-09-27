@@ -1,0 +1,6 @@
+name: Zero Page De-duplication - Reading More Than RAM
+bonus: ZERO_DEDUP
+qemu: -m 32M
+
+matchlines:
+  - "[PID     1] Exiting gracefully with code 0"
