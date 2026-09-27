@@ -20,7 +20,7 @@ static int protect_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	if (!(*entry & PAGE_PRESENT)) return 0;
 
-	physaddr_t nentry = PAGE_ADDR(*entry) | (info->flags) | PAGE_PRESENT;
+	physaddr_t nentry = PAGE_ADDR(*entry) | (info->flags) | PAGE_PRESENT | (*entry & PAGE_DIRTY);
 	
 	if (nentry == *entry) return 0;
 	
@@ -43,7 +43,7 @@ static int protect_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	if (!(*entry & PAGE_PRESENT) || !(*entry & PAGE_HUGE)) return 0;
 	if (info->base <= base && end <= info->end) {
-		physaddr_t nentry = PAGE_ADDR(*entry) | (info->flags) | PAGE_PRESENT | PAGE_HUGE;
+		physaddr_t nentry = PAGE_ADDR(*entry) | (info->flags) | PAGE_PRESENT | PAGE_HUGE | (*entry & PAGE_DIRTY); 
 		if (nentry == *entry) return 0;
 		*entry = nentry;
 		tlb_invalidate(info->pml4, (void *)base);

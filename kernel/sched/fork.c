@@ -23,7 +23,7 @@ static int cow_share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struc
 		tlb_invalidate(info->pml4, (void *)base);
 	}
 
-	return page_insert(info->child_pml4, pa2page(PAGE_ADDR(*entry)), (void *)base, *entry & PAGE_UMASK);
+	return page_insert(info->child_pml4, pa2page(PAGE_ADDR(*entry)), (void *)base, *entry & (PAGE_UMASK | PAGE_DIRTY));
 }
 
 static int cow_share_pde(physaddr_t *entry, uintptr_t pde_base, uintptr_t pde_end, struct page_walker *walker) {
