@@ -21,11 +21,11 @@ void syscall_init(void)
 	union star_reg star = { .reg = 0 };
 
 	star.kern_sel = GDT_KCODE;
-	star.user_sel = GDT_UCODE;
+	star.user_sel = GDT_KDATA;
 	write_msr(MSR_STAR, star.reg);
 	write_msr(MSR_LSTAR, (uintptr_t)syscall64);
 	write_msr(MSR_SFMASK, FLAGS_IF | FLAGS_DF | FLAGS_TF);
-	write_msr(MSR_KERNEL_GS_BASE, (uintptr_t)this_cpu);
+	write_msr(MSR_GS_BASE, (uintptr_t)this_cpu);
 	write_msr(MSR_EFER, read_msr(MSR_EFER) | MSR_EFER_SCE);
 #endif
 }

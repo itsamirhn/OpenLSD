@@ -52,6 +52,12 @@ ISR_NOERRCODE 128
 isr_common_stub:
 	/* Save the register state on the stack. */
 	/* Recover the segments. */
+#ifdef BONUS_SYSCALL
+	testq $3, 24(%rsp)
+	jz isr_common_stub_body
+	swapgs
+isr_common_stub_body:
+#endif
 	pushq %rax
 	pushq %rcx
 	pushq %rdx
@@ -160,6 +166,13 @@ iret64:
 	popq %rdx
 	popq %rcx
 	popq %rax
+
+#ifdef BONUS_SYSCALL
+	testq $3, 24(%rsp)
+	jz iret64end
+	swapgs
+iret64end:
+#endif
 
 	/* Return from the interrupt. */
 	addq $16, %rsp
