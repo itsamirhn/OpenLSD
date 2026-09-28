@@ -13,6 +13,7 @@ enum {
 	SYS_mprotect,
 	SYS_madvise,
 	SYS_gettimeofday,
+	SYS_clock_gettime,
 	SYS_yield,
 	SYS_wait,
 	SYS_waitpid,

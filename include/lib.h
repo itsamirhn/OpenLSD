@@ -27,6 +27,16 @@ struct timespec {
 	long tv_nsec;
 };
 
+struct timeval {
+	time_t tv_sec;
+	long tv_usec;
+};
+
+typedef int clockid_t;
+
+#define CLOCK_REALTIME  0
+#define CLOCK_MONOTONIC 1
+
 enum {
 	VMA_FREE = 0,
 	VMA_ANONYMOUS,
@@ -62,7 +72,9 @@ int getc(void);
 pid_t getpid(void);
 int kill(pid_t);
 void exit(int);
-int gettimeofday(struct timespec *tv);
+int gettimeofday(struct timeval *tv);
+int clock_gettime(clockid_t clock, struct timespec *ts);
+time_t time(time_t *t);
 
 #ifdef BONUS_VDSO
 void *vdso_sym(void *base, const char *name);
@@ -112,6 +124,7 @@ int exec(char *binary_name);
 time_t tm_to_time(struct tm *tm);
 void time_init(void);
 void time_now(struct timespec *tv);
+void time_monotonic(struct timespec *tv);
 uint64_t time_tsc_khz(void);
 uint64_t time_tsc_base(void);
 time_t time_epoch_base(void);

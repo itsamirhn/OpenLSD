@@ -74,17 +74,37 @@ pid_t getpid(void)
 	 return syscall(SYS_getpid, 0, 0, 0, 0, 0, 0, 0);
 }
 
-int gettimeofday(struct timespec *tv)
+int clock_gettime(clockid_t clock, struct timespec *ts)
 {
 	#ifdef BONUS_VDSO
-	static int (*vgettimeofday)(const struct vdso_data *data, struct timespec *tv);
-	if (!vgettimeofday) {
+	static int (*vclock_gettime)(const struct vdso_data *data, clockid_t clock, struct timespec *ts);
+	if (!vclock_gettime) {
 		const struct vdso_data *vdso_data = (const struct vdso_data *)vdso_vvar_base;
-		vgettimeofday = vdso_sym((void *)vdso_data->vdso_base, "__vdso_gettimeofday");
+		vclock_gettime = vdso_sym((void *)vdso_data->vdso_base, "__vdso_clock_gettime");
 	}
-	if (vgettimeofday) return vgettimeofday((const struct vdso_data *)vdso_vvar_base, tv);
+	if (vclock_gettime) return vclock_gettime((const struct vdso_data *)vdso_vvar_base, clock, ts);
+	#endif
+	return syscall(SYS_clock_gettime, 0, clock, (uintptr_t)ts, 0, 0, 0, 0);
+}
+
+int gettimeofday(struct timeval *tv) {
+	#ifdef BONUS_VDSO
+	if (!tv) return -EINVAL;
+	struct timespec ts;
+	int ret = clock_gettime(CLOCK_REALTIME, &ts);
+	if (ret < 0) return ret;
+	tv->tv_sec = ts.tv_sec;
+	tv->tv_usec = ts.tv_nsec / 1000;
+	return 0;
 	#endif
 	return syscall(SYS_gettimeofday, 0, (uintptr_t)tv, 0, 0, 0, 0, 0);
+}
+
+time_t time(time_t *t) {
+	struct timespec ts;
+	if (clock_gettime(CLOCK_REALTIME, &ts) < 0) return -1;
+	if (t) *t = ts.tv_sec;
+	return ts.tv_sec;
 }
 
 int mquery(struct vma_info *info, void *addr)

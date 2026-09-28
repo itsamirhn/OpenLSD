@@ -75,12 +75,17 @@ void time_init(void) {
 	epoch_base = tm_to_time(&tm);
 }
 
-void time_now(struct timespec *tv) {
+void time_monotonic(struct timespec *tv) {
 	uint64_t delta = read_tsc() - tsc_base;
 	uint64_t ticks_per_sec = tsc_khz * 1000ULL;
 
-	tv->tv_sec = epoch_base + (time_t)(delta / ticks_per_sec);
+	tv->tv_sec = (time_t)(delta / ticks_per_sec);
 	tv->tv_nsec = (long)((delta % ticks_per_sec) * 1000ULL * 1000ULL / tsc_khz);
+}
+
+void time_now(struct timespec *tv) {
+	time_monotonic(tv);
+	tv->tv_sec += epoch_base;
 }
 
 uint64_t time_tsc_khz(void) { return tsc_khz; }

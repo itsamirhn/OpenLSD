@@ -74,14 +74,34 @@ static pid_t sys_getpid(void)
 	return cur_task->task_pid;
 }
 
-static int sys_gettimeofday(struct timespec *tv) {
+static int sys_gettimeofday(struct timeval *tv) {
 	if (!tv) return -EINVAL;
 
 	assert_user_mem(cur_task, tv, sizeof *tv, PROT_WRITE);
 
-	time_now(tv);
+	struct timespec ts;
+	time_now(&ts);
+	tv->tv_sec = ts.tv_sec;
+	tv->tv_usec = ts.tv_nsec / 1000; // Nano to micro
 
 	return 0;
+}
+
+static int sys_clock_gettime(clockid_t clock, struct timespec *ts) {
+	if (!ts) return -EINVAL;
+
+	assert_user_mem(cur_task, ts, sizeof *ts, PROT_WRITE);
+
+	switch (clock) {
+		case CLOCK_REALTIME:
+			time_now(ts);
+			return 0;
+		case CLOCK_MONOTONIC:
+			time_monotonic(ts);
+			return 0;
+		default:
+			return -EINVAL;
+	}
 }
 
 static int sys_kill(pid_t pid)
@@ -134,7 +154,9 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 		case SYS_getpid:
 			return sys_getpid();
 		case SYS_gettimeofday:
-			return sys_gettimeofday((struct timespec *)a1);
+			return sys_gettimeofday((struct timeval *)a1);
+		case SYS_clock_gettime:
+			return sys_clock_gettime((clockid_t)a1, (struct timespec *)a2);
 		case SYS_kill:
 			return sys_kill((pid_t)a1);
 		case SYS_exit:
