@@ -49,6 +49,12 @@ struct task {
 	/* The number of times the task has been run. */
 	unsigned task_runs;
 
+	/* Remaining TSC budget in the current scheduling round. */
+	uint64_t task_budget;
+
+	/* TSC value when the task most recently started running. */
+	uint64_t task_start_tsc;
+
 	/* The exit status of the task in case it has died */
 	int task_exit_status;
 
