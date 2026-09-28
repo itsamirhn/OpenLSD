@@ -44,6 +44,5 @@ void hpet_get_time(struct timespec *time)
 	uint64_t cnt = hpet_regs->main_cnt_val;
 
 	time->tv_sec = cnt / hpet_freq;
-	time->tv_nsec = cnt % hpet_freq;
+	time->tv_nsec = (cnt % hpet_freq) * 1000ULL * 1000ULL * 1000ULL / hpet_freq;
 }
-

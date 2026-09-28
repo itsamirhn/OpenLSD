@@ -110,6 +110,11 @@ int exec(char *binary_name);
 
 /* time.c */
 time_t tm_to_time(struct tm *tm);
+void time_init(void);
+void time_now(struct timespec *tv);
+uint64_t time_tsc_khz(void);
+uint64_t time_tsc_base(void);
+time_t time_epoch_base(void);
 
 /* vma.c */
 void print_vmas(void);

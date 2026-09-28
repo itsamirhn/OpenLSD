@@ -11,7 +11,6 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <kernel/vma/syscall.h>
-#include <kernel/clock.h>
 
 extern void syscall64(void);
 
