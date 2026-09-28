@@ -1,0 +1,11 @@
+name: Exec - Replace Process Image
+description: Replace the current process image with the embedded hello binary
+points: 0.5
+bonus: ZERO_DEDUP
+
+regexlines:
+  - 'Executing embedded hello binary'
+  - 'Hello, world!'
+  - 'We are number 1!'
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'

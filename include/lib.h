@@ -106,6 +106,7 @@ void sched_yield(void);
 pid_t wait(int *rstatus);
 pid_t waitpid(pid_t pid, int *rstatus, int opts);
 pid_t fork(void);
+int exec(char *binary_name);
 
 /* time.c */
 time_t tm_to_time(struct tm *tm);
