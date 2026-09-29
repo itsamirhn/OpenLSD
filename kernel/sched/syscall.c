@@ -11,6 +11,8 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <kernel/vma/syscall.h>
+#include <kernel/vma.h>
+#include <kernel/symbols.h>
 
 extern void syscall64(void);
 
@@ -32,9 +34,13 @@ void syscall_init(void)
 
 static inline void protected_copy(void *dst, const void *src, size_t len)
 {
+	#ifdef BONUS_SMEP_SMAP
 	stac();
+	#endif
 	memcpy(dst, src, len);
+	#ifdef BONUS_SMEP_SMAP
 	clac();
+	#endif
 }
 
 /*
@@ -134,6 +140,38 @@ static int sys_exit(int rcode)
 	return 0;
 }
 
+int sys_exec(char *binary_name)
+{
+	char symbol_name[256];
+	char name[128];
+	size_t prefix_length;
+
+	int length = strlen(binary_name);
+
+	assert_user_mem(cur_task, (void *)binary_name, length + 1, PROT_READ);
+		
+	if (length == (int)sizeof(name) - 1){
+		return -EINVAL;
+	}
+
+	protected_copy(name, binary_name, length + 1); // just if SMAP is on.
+	
+	strlcpy(symbol_name, "_binary_obj_user_", sizeof(symbol_name));
+	prefix_length = strlen(symbol_name);
+	if (prefix_length + length + sizeof("_start") > sizeof(symbol_name)){
+		return -EINVAL;
+	}
+	memcpy(symbol_name + prefix_length, name, length);
+	strlcpy(symbol_name + prefix_length + length, "_start", sizeof(symbol_name) - prefix_length - length);
+
+	uint8_t *binary = find_symbol(symbol_name, ELF_SYM_TYPE_ANY);
+	if (!binary){
+		return -EINVAL;
+	}
+
+	return task_exec(binary);
+}
+
 
 
 /* Dispatches to the correct kernel function, passing the arguments. */
@@ -181,6 +219,8 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 			return sys_waitpid((pid_t)a1, (int *)a2, (int)a3);
 		case SYS_fork:
 			return sys_fork();
+		case SYS_exec:
+			return sys_exec((char *)a1);
 		default:
 			return -ENOSYS;
 	}

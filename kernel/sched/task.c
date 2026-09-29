@@ -275,7 +275,7 @@ static void task_relocate_elf(struct elf *elf_hdr, uintptr_t base) {
  *
  * Finally, this function maps one page for the program's initial stack.
  */
-static void task_load_elf(struct task *task, uint8_t *binary)
+static int task_load_elf(struct task *task, uint8_t *binary)
 {
 	/* Hints:
 	 * - Load each program segment into virtual memory at the address
@@ -331,7 +331,9 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 		uintptr_t base = ROUNDDOWN(va, PAGE_SIZE);
 		uintptr_t end = ROUNDUP(va + prog_hdr->p_memsz, PAGE_SIZE);
 
-		assert(add_executable_vma(task, name, (void *)base, end - base, flags, binary + prog_hdr->p_offset, prog_hdr->p_filesz, va - base) != NULL);
+		if (!add_executable_vma(task, name, (void *)base, end - base, flags,binary + prog_hdr->p_offset, prog_hdr->p_filesz, va - base)){
+			return -ENOMEM;
+		}
 	}
 
 	#ifdef BONUS_ASLR
@@ -344,7 +346,11 @@ static void task_load_elf(struct task *task, uint8_t *binary)
 	#endif
 	task->task_frame.rip = code_base + elf_hdr->e_entry;
 
-	assert(add_anonymous_vma(task, "stack", (void *)(stack_top - PAGE_SIZE),PAGE_SIZE, VM_READ | VM_WRITE));
+	if (!add_anonymous_vma(task, "stack", (void *)(stack_top - PAGE_SIZE), PAGE_SIZE, VM_READ | VM_WRITE)){
+		return -ENOMEM;
+	}
+
+	return 0;
 }
 
 /* Allocates a new task with task_alloc(), loads the named ELF binary using
@@ -359,11 +365,64 @@ void task_create(uint8_t *binary, enum task_type type)
 	struct task *task = task_alloc(0);
 
 	task->task_type = type;
-	task_load_elf(task, binary);
+	assert(task_load_elf(task, binary) == 0);
 	
 	if (type == TASK_TYPE_USER) nuser_tasks++;
 	
 	sched_enqueue(task);
+}
+
+static void task_dispose_address_space(struct task *task)
+{
+	free_all_vmas(task);
+	unmap_user_pages(task->task_pml4);
+}
+
+int task_exec(uint8_t *binary)
+{
+	struct task replacement = {0};
+	struct list *node;
+	struct vma *vma;
+
+	replacement.task_frame.ds = GDT_UDATA | 3;
+	replacement.task_frame.ss = GDT_UDATA | 3;
+	replacement.task_frame.cs = GDT_UCODE | 3;
+	replacement.task_frame.rsp = USTACK_TOP;
+	replacement.task_frame.rflags = FLAGS_IF;
+	rb_init(&replacement.task_rb);
+	list_init(&replacement.task_mmap);
+
+	if (task_setup_vas(&replacement) < 0){
+		return -ENOMEM;
+	}
+	#ifdef BONUS_VDSO
+	if (task_setup_vdso(&replacement) < 0) {
+		task_dispose_address_space(&replacement);
+		return -ENOMEM;
+	}
+	#endif
+	if (task_load_elf(&replacement, binary) < 0) {
+		task_dispose_address_space(&replacement);
+		return -ENOMEM;
+	}
+
+	task_dispose_address_space(cur_task);
+
+	cur_task->task_pml4 = replacement.task_pml4;
+	rb_init(&cur_task->task_rb);
+	list_init(&cur_task->task_mmap);
+	cur_task->task_frame = replacement.task_frame;
+
+	while (!list_is_empty(&replacement.task_mmap)) {
+		node = list_next(&replacement.task_mmap, &replacement.task_mmap);
+		vma = container_of(node, struct vma, vm_mmap);
+		remove_vma(&replacement, vma);
+		assert(insert_vma(cur_task, vma) == 0);
+	}
+
+	load_pml4(PADDR(cur_task->task_pml4));
+
+	return 0;
 }
 
 /* Free the task and all of the memory that is used by it.

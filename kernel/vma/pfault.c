@@ -19,6 +19,28 @@ static int task_zero_fault(struct task *task, struct vma *vma, void *va) {
 }
 #endif
 
+static int task_shared_file_fault(struct task *task, struct vma *vma, void *va)
+{
+	uintptr_t page_base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
+	uintptr_t data_base = (uintptr_t)vma->vm_base + vma->vm_offset;
+	uintptr_t data_end = data_base + vma->vm_len;
+	uintptr_t source = (uintptr_t)vma->vm_src + (page_base - data_base);
+	struct page_info *page = page_lookup(kernel_pml4, (void *)source, NULL);
+
+	if (page_base < data_base || page_base + PAGE_SIZE > data_end || !vma->vm_src || !vma->vm_len){
+		return 1;
+	}
+	
+	if (!page || !page_aligned(source)){
+		return 1;
+	}
+	page->pp_ref++;
+
+	assert (page_insert(task->task_pml4, page, (void *)page_base,PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC)) < 0);
+
+	return 0;
+}
+
 static int task_cow_fault(struct task *task, void *va) {
 	physaddr_t *entry = NULL;
 	struct page_info *page = page_lookup(task->task_pml4, va, &entry); if (!page) return -EFAULT;
@@ -44,15 +66,18 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 	struct vma *vma;
 	int vma_flags = VM_READ;
 
-	if (!task || va >= (void *)USER_LIM)
+	if (!task || va >= (void *)USER_LIM){
 		return -EFAULT;
+	}
 
 	vma = task_find_vma(task, va);
-	if (!vma)
+	if (!vma) {
 		return -EFAULT;
+	}
 
-	if (flags & PF_WRITE)
+	if (flags & PF_WRITE){
 		vma_flags |= VM_WRITE;
+	}
 	if (flags & PF_IFETCH) {
 		vma_flags &= ~VM_READ;
 		vma_flags |= VM_EXEC;
@@ -63,8 +88,15 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 	if ((flags & PF_PRESENT) && (flags & PF_WRITE)) return task_cow_fault(task, va);
 
 	#ifdef BONUS_ZERO_DEDUP
-	// Only read or exec should be catched here. write will get handled by populate_vma_range
-	if (!(flags & PF_PRESENT) && !(flags & PF_WRITE) && !vma->vm_src) return task_zero_fault(task, vma, va);
+	if (!(flags & PF_PRESENT)) {
+		if(task_shared_file_fault(task, vma, va)){
+			uintptr_t page_base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
+			uintptr_t data_end = vma->vm_src ? (uintptr_t)vma->vm_base + vma->vm_offset + vma->vm_len : 0;
+			if (!vma->vm_src || page_base >= data_end){
+				return task_zero_fault(task, vma, va);
+			}
+		}
+	}
 	#endif
 
 	return populate_vma_range(task, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE),PAGE_SIZE, vma_flags);
