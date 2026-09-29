@@ -27,16 +27,10 @@ static int task_shared_file_fault(struct task *task, struct vma *vma, void *va)
 	uintptr_t source = (uintptr_t)vma->vm_src + (page_base - data_base);
 	struct page_info *page = page_lookup(kernel_pml4, (void *)source, NULL);
 
-	if (page_base < data_base || page_base + PAGE_SIZE > data_end || !vma->vm_src || !vma->vm_len){
-		return 1;
-	}
-	
-	if (!page || !page_aligned(source)){
-		return 1;
-	}
-	page->pp_ref++;
+	if (page_base < data_base || page_base + PAGE_SIZE > data_end || !vma->vm_src || !vma->vm_len) return 1;
+	if (!page || !page_aligned(source)) return 1;
 
-	assert (page_insert(task->task_pml4, page, (void *)page_base,PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC)) < 0);
+	assert(page_insert(task->task_pml4, page, (void *)page_base,PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC)) == 0);
 
 	return 0;
 }

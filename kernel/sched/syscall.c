@@ -150,7 +150,7 @@ int sys_exec(char *binary_name)
 
 	assert_user_mem(cur_task, (void *)binary_name, length + 1, PROT_READ);
 		
-	if (length == (int)sizeof(name) - 1){
+	if (length >= (int)sizeof(name) - 1){
 		return -EINVAL;
 	}
 

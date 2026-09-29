@@ -383,7 +383,8 @@ int task_exec(uint8_t *binary)
 	struct task replacement = {0};
 	struct list *node;
 	struct vma *vma;
-
+	
+	replacement.task_pid = cur_task->task_pid;
 	replacement.task_frame.ds = GDT_UDATA | 3;
 	replacement.task_frame.ss = GDT_UDATA | 3;
 	replacement.task_frame.cs = GDT_UCODE | 3;
