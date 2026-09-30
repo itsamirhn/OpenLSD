@@ -37,6 +37,17 @@ typedef int clockid_t;
 #define CLOCK_REALTIME  0
 #define CLOCK_MONOTONIC 1
 
+// clock_nanosleep flag for absolute time
+#define TIMER_ABSTIME   1
+
+#define MSEC_PER_SEC (1000ULL)
+#define USEC_PER_MSEC (1000ULL)
+#define NSEC_PER_USEC (1000ULL)
+#define USEC_PER_SEC (USEC_PER_MSEC * MSEC_PER_SEC)
+#define NSEC_PER_SEC (NSEC_PER_USEC * USEC_PER_SEC)
+#define USEC_TO_SEC(usec) ((usec) / (USEC_PER_MSEC * MSEC_PER_SEC))
+#define USEC_TO_NSEC(usec) ((usec) * NSEC_PER_USEC)
+
 enum {
 	VMA_FREE = 0,
 	VMA_ANONYMOUS,
@@ -75,6 +86,10 @@ void exit(int);
 int gettimeofday(struct timeval *tv);
 int clock_gettime(clockid_t clock, struct timespec *ts);
 time_t time(time_t *t);
+int clock_nanosleep(clockid_t clock, int flags, const struct timespec *req, struct timespec *rem);
+int nanosleep(const struct timespec *req, struct timespec *rem);
+int usleep(unsigned int usec);
+unsigned int sleep(unsigned int seconds);
 
 #ifdef BONUS_VDSO
 void *vdso_sym(void *base, const char *name);

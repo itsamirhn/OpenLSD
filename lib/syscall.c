@@ -107,6 +107,25 @@ time_t time(time_t *t) {
 	return ts.tv_sec;
 }
 
+int clock_nanosleep(clockid_t clock, int flags, const struct timespec *req, struct timespec *rem) {
+	return syscall(SYS_clock_nanosleep, 0, clock, flags, (uintptr_t)req, 0, 0, 0);
+}
+
+int nanosleep(const struct timespec *req, struct timespec *rem) {
+	return clock_nanosleep(CLOCK_MONOTONIC, 0, req, rem);
+}
+
+int usleep(unsigned int usec) {
+	struct timespec ts = { .tv_sec = USEC_TO_SEC(usec), .tv_nsec = USEC_TO_NSEC((usec % USEC_PER_SEC)) };
+	return nanosleep(&ts, NULL);
+}
+
+unsigned int sleep(unsigned int seconds) {
+	struct timespec ts = { .tv_sec = seconds, .tv_nsec = 0 };
+	nanosleep(&ts, NULL);
+	return 0;
+}
+
 int mquery(struct vma_info *info, void *addr)
 {
 	return syscall(SYS_mquery, 0, (uint64_t)info, (uint64_t)addr, 0, 0, 0, 0);

@@ -110,6 +110,11 @@ static int sys_clock_gettime(clockid_t clock, struct timespec *ts) {
 	}
 }
 
+static int sys_clock_nanosleep(clockid_t clock, int flags, const struct timespec *req) {
+	// TODO
+	return -ENOSYS;
+}
+
 static int sys_kill(pid_t pid)
 {
 	struct task *task;
@@ -219,6 +224,8 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 			return sys_waitpid((pid_t)a1, (int *)a2, (int)a3);
 		case SYS_fork:
 			return sys_fork();
+		case SYS_clock_nanosleep:
+			return sys_clock_nanosleep((clockid_t)a1, (int)a2, (const struct timespec *)a3);
 		case SYS_exec:
 			return sys_exec((char *)a1);
 		default:

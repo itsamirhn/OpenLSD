@@ -19,5 +19,6 @@ enum {
 	SYS_waitpid,
 	SYS_fork,
 	SYS_exec,
+	SYS_clock_nanosleep,
 	NSYSCALLS,
 };
