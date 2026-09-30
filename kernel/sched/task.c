@@ -376,12 +376,13 @@ static void task_dispose_address_space(struct task *task)
 {
 	free_all_vmas(task);
 	unmap_user_pages(task->task_pml4);
+	page_decref(pa2page(PADDR(task->task_pml4)));
 }
 
 int task_exec(uint8_t *binary)
 {
 	struct task replacement = {0};
-	struct list *node;
+	struct list *node, *next;
 	struct vma *vma;
 	
 	replacement.task_pid = cur_task->task_pid;
@@ -407,21 +408,21 @@ int task_exec(uint8_t *binary)
 		return -ENOMEM;
 	}
 
-	task_dispose_address_space(cur_task);
-
-	cur_task->task_pml4 = replacement.task_pml4;
-	rb_init(&cur_task->task_rb);
-	list_init(&cur_task->task_mmap);
-	cur_task->task_frame = replacement.task_frame;
-
-	while (!list_is_empty(&replacement.task_mmap)) {
-		node = list_next(&replacement.task_mmap, &replacement.task_mmap);
+	free_all_vmas(cur_task);
+	list_foreach_safe(&replacement.task_mmap, node, next) {
 		vma = container_of(node, struct vma, vm_mmap);
 		remove_vma(&replacement, vma);
 		assert(insert_vma(cur_task, vma) == 0);
 	}
 
+	struct page_table *old_pml4 = cur_task->task_pml4;
+	cur_task->task_pml4 = replacement.task_pml4;
+	cur_task->task_frame = replacement.task_frame;
 	load_pml4(PADDR(cur_task->task_pml4));
+
+	// replacement's vma list is empty now, so this for only droping the old page tables
+	replacement.task_pml4 = old_pml4;
+	task_dispose_address_space(&replacement);
 
 	return 0;
 }
