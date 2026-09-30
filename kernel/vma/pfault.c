@@ -86,14 +86,12 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 	if ((flags & PF_PRESENT) && (flags & PF_WRITE)) return task_cow_fault(task, va);
 
 	#ifdef BONUS_ZERO_DEDUP
-	if (!(flags & PF_PRESENT)) {
-		if(task_shared_file_fault(task, vma, va)){
-			uintptr_t page_base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
-			uintptr_t data_end = vma->vm_src ? (uintptr_t)vma->vm_base + vma->vm_offset + vma->vm_len : 0;
-			if (!vma->vm_src || page_base >= data_end){
-				return task_zero_fault(task, vma, va);
-			}
-		}
+	// Only read or exec faults are de-duplicated. Writes get handled by populate_vma_range
+	if (!(flags & PF_PRESENT) && !(flags & PF_WRITE)) {
+		uintptr_t data_end = (uintptr_t)vma->vm_base + vma->vm_offset + vma->vm_len;
+
+		if (task_shared_file_fault(task, vma, va) == 0) return 0;
+		if (!vma->vm_src || ROUNDDOWN((uintptr_t)va, PAGE_SIZE) >= data_end) return task_zero_fault(task, vma, va);
 	}
 	#endif
 
