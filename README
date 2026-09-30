@@ -1,3 +1,22 @@
+# LAB 5
+## Scheduler
+The scheduler uses preemptive, time slicing. We give each task receives a 10,000,000 ticks budget for a scheduling round. Whenever the scheduler is entered, we subtracts the elapsed TSC ticks from the currently running task's remaining budget. We then chooses the runnable task with the greatest remaining budget.
+This gives tasks that have used less CPU time earlier access to the CPU and prevents a task that frequently yields from receiving extra service merely because it yields often.
+
+When every runnable task have exhausted their budgets, we replenish each budget for a new round. We resolve ties in run-queue order, which keeps behavior deterministic and provides a simple round-robin fallback. 
+
+## Bonus
+## Exec + Zero-Page Deduplication
+##### MACRO = BONUS_EXEC_ZERO_DEDUP
+
+First, we have to find the executable in the image. That is done inside sys_exec() which uses find_symbol() to find its location; afterwards we call task_exec().
+
+On the stack of the function we make a replacement task, which is used to set up the memory layout. If that does not succeed we still have the current user binary we can return to with an error. Once we were able to inititilise the vma's, we move those to the current task, after we removed the current vma's from the current task. We transition the task frame and pml4 pointer, then we clean up the "replacement" task at the end.
+
+For Zero deduplication we point to one global zero page when we page fault on non present or non written pages. task_shared_file_fault() is used to point to the physical pages used by the kernel for the user binary
+
+
+------------------------------------------------
 # LAB 4 bonus
 ## VDSO
 
