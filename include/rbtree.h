@@ -162,6 +162,7 @@ struct rb_tree {
 	 */                                                                                                            \
 	static int rb_guarded_insert_func_name(struct rb_tree *root, type *new_entry, type **out_successor)            \
 	{                                                                                                              \
+		typedef int (*validate_func_t)(type *, type *);                                                            \
 		/* Create a new node */                                                                                    \
 		struct rb_node *y = NULL; /* trailing parent pointer */                                                    \
 		struct rb_node *x = root->root; /* current node */                                                         \
@@ -171,7 +172,8 @@ struct rb_tree {
 		while (x != NULL) {                                                                                        \
 			y = x;                                                                                                 \
 			type *x_entry = container_of(x, type, rb_node_member);                                                 \
-			if (validate_func && validate_func(new_entry, x_entry) != 0) {                                         \
+			validate_func_t validate = (validate_func_t)validate_func;                                             \
+			if (validate != NULL && validate(new_entry, x_entry) != 0) {                                           \
                 /* Validation failed! Rollback sizes before returning. */                                          \
                 /* We went down the path incrementing sizes, now we must undo that. */                             \
 				struct rb_node *rollback_node = y;                                                                 \
