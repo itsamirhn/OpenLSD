@@ -17,23 +17,27 @@ static int task_zero_fault(struct task *task, struct vma *vma, void *va) {
 
 	return page_insert(task->task_pml4, zero_page, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE), PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC));
 }
-#endif
 
 static int task_shared_file_fault(struct task *task, struct vma *vma, void *va)
 {
 	uintptr_t page_base = ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
 	uintptr_t data_base = (uintptr_t)vma->vm_base + vma->vm_offset;
 	uintptr_t data_end = data_base + vma->vm_len;
+
+	if (!vma->vm_src || !vma->vm_len || page_base < data_base || page_base + PAGE_SIZE > data_end) return 1;
+
 	uintptr_t source = (uintptr_t)vma->vm_src + (page_base - data_base);
-	struct page_info *page = page_lookup(kernel_pml4, (void *)source, NULL);
+	if (!page_aligned(source)) return 1;
 
-	if (page_base < data_base || page_base + PAGE_SIZE > data_end || !vma->vm_src || !vma->vm_len) return 1;
-	if (!page || !page_aligned(source)) return 1;
+	// vm_src lives in the kernel image, which may be mapped with 2M pages so take the 4K frame directly
+	struct page_info *page = pa2page(PADDR((void *)source));
 
-	assert(page_insert(task->task_pml4, page, (void *)page_base,PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC)) == 0);
+	// pin it so that unmapping never frees it and CoW never makes it writable in place
+	if (page->pp_ref == 0) page->pp_ref = 1;
 
-	return 0;
+	return page_insert(task->task_pml4, page, (void *)page_base, PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC));
 }
+#endif
 
 static int task_cow_fault(struct task *task, void *va) {
 	physaddr_t *entry = NULL;
