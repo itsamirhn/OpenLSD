@@ -1,0 +1,10 @@
+name: Sleep - sleep(), usleep() and nanosleep()
+description: Each call sleeps at least as long as requested, and not much longer
+points: 0.5
+
+regexlines:
+  - 'sleep\(1\) ok'
+  - 'usleep\(250 ms\) ok'
+  - 'nanosleep\(300 ms\) ok'
+  - 'usleep\(0\) ok'
+  - '.PID     1. Exiting gracefully with code 0'
