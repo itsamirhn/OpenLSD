@@ -5,7 +5,7 @@
 #include <kernel/mem.h>
 #include <kernel/vma.h>
 
-#ifdef BONUS_ZERO_DEDUP
+#ifdef BONUS_EXEC_ZERO_DEDUP
 static struct page_info *zero_page = NULL;
 
 static int task_zero_fault(struct task *task, struct vma *vma, void *va) {
@@ -85,7 +85,7 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 
 	if ((flags & PF_PRESENT) && (flags & PF_WRITE)) return task_cow_fault(task, va);
 
-	#ifdef BONUS_ZERO_DEDUP
+	#ifdef BONUS_EXEC_ZERO_DEDUP
 	// Only read or exec faults are de-duplicated. Writes get handled by populate_vma_range
 	if (!(flags & PF_PRESENT) && !(flags & PF_WRITE)) {
 		uintptr_t data_end = (uintptr_t)vma->vm_base + vma->vm_offset + vma->vm_len;

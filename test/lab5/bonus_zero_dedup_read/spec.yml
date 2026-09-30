@@ -1,5 +1,5 @@
 name: Zero Page De-duplication - Reading More Than RAM
-bonus: ZERO_DEDUP
+bonus: EXEC_ZERO_DEDUP
 qemu: -m 32M
 
 matchlines:
