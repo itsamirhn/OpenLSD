@@ -45,8 +45,12 @@ typedef int clockid_t;
 #define NSEC_PER_USEC (1000ULL)
 #define USEC_PER_SEC (USEC_PER_MSEC * MSEC_PER_SEC)
 #define NSEC_PER_SEC (NSEC_PER_USEC * USEC_PER_SEC)
+#define NSEC_PER_MSEC (USEC_PER_MSEC * NSEC_PER_USEC) 
 #define USEC_TO_SEC(usec) ((usec) / (USEC_PER_MSEC * MSEC_PER_SEC))
 #define USEC_TO_NSEC(usec) ((usec) * NSEC_PER_USEC)
+#define MSEC_TO_USEC(msec) ((msec) * USEC_PER_MSEC)
+#define MSEC_TO_NSEC(msec) ((msec) * NSEC_PER_MSEC)
+#define SEC_TO_NSEC(sec) ((sec) * NSEC_PER_SEC)
 
 enum {
 	VMA_FREE = 0,

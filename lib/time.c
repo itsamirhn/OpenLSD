@@ -6,7 +6,8 @@
 #include <kernel/acpi.h>
 #include <kernel/rtc.h>
 
-#define TSC_CALIBRATE_NS 10000000ULL
+#define TSC_CALIBRATE_MS (10ULL)
+#define TSC_CALIBRATE_NS MSEC_TO_NSEC(TSC_CALIBRATE_MS)
 
 static uint64_t tsc_khz;
 static uint64_t tsc_base;
@@ -49,7 +50,7 @@ static uint64_t hpet_ns(void) {
 	struct timespec ts;
 
 	hpet_get_time(&ts);
-	return ts.tv_sec * 1000ULL * 1000ULL * 1000ULL + ts.tv_nsec;
+	return SEC_TO_NSEC(ts.tv_sec) + ts.tv_nsec;
 }
 
 static uint64_t calibrate_tsc(void) {
@@ -59,7 +60,7 @@ static uint64_t calibrate_tsc(void) {
 
 	while ((ns = hpet_ns()) - start_ns < TSC_CALIBRATE_NS) {}
 
-	return (read_tsc() - start_tsc) * 1000ULL * 1000ULL / (ns - start_ns);
+	return (read_tsc() - start_tsc) * NSEC_PER_MSEC / (ns - start_ns);
 }
 
 void time_init(void) {
@@ -77,10 +78,10 @@ void time_init(void) {
 
 void time_monotonic(struct timespec *tv) {
 	uint64_t delta = read_tsc() - tsc_base;
-	uint64_t ticks_per_sec = tsc_khz * 1000ULL;
+	uint64_t ticks_per_sec = tsc_khz * MSEC_PER_SEC;
 
 	tv->tv_sec = (time_t)(delta / ticks_per_sec);
-	tv->tv_nsec = (long)((delta % ticks_per_sec) * 1000ULL * 1000ULL / tsc_khz);
+	tv->tv_nsec = (long)((delta % ticks_per_sec) * NSEC_PER_MSEC / tsc_khz);
 }
 
 void time_now(struct timespec *tv) {

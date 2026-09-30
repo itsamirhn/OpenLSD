@@ -1,8 +1,6 @@
 #include <lib.h>
 
 #define SLACK_NS MSEC_TO_NSEC(100) // Allow 100ms of slack for sleep tests ...
-#define MSEC_TO_USEC(msec) ((msec) * USEC_PER_MSEC)
-#define MSEC_TO_NSEC(msec) (MSEC_TO_USEC(msec) * NSEC_PER_USEC)
 
 static uint64_t now_ns(void) {
 	struct timespec ts;
