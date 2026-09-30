@@ -68,7 +68,7 @@ void sched_yield(void)
 		}
 	}
 
-	if (best_task && cur_task && cur_task->task_budget == 0 && best_task->task_budget == 0) {
+	if (best_task && cur_task && best_task->task_budget == 0) {
 		cur_task->task_budget = SCHED_TIME_BUDGET;
 		list_foreach(&runq, node){
 			container_of(node, struct task, task_node)->task_budget = SCHED_TIME_BUDGET;
