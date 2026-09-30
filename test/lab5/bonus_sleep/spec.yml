@@ -1,7 +1,7 @@
 name: Sleep - sleep(), usleep() and nanosleep()
 description: Each call sleeps at least as long as requested, and not much longer
 points: 0.5
-
+bonus: SLEEP_TIME
 regexlines:
   - 'sleep\(1\) ok'
   - 'usleep\(250 ms\) ok'

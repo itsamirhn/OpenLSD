@@ -472,6 +472,10 @@ void task_destroy(struct task *task)
 {
 	list_del(&task->task_node);
 
+	#ifdef BONUS_SLEEP_TIME
+	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
+	#endif
+
 	if (!list_is_empty(&task->task_child)) {
 		struct task *parent = pid2task(task->task_ppid, 0);
 		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {

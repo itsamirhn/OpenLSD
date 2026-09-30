@@ -49,7 +49,9 @@ void sched_yield(void)
 	struct task *best_task = NULL;
 	uint64_t elapsed = 0;
 
+	#ifdef BONUS_SLEEP_TIME
 	wakeup();
+	#endif
 
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
 		elapsed = read_tsc() - cur_task->task_start_tsc;
@@ -86,10 +88,12 @@ void sched_yield(void)
 	if (cur_task && cur_task->task_status == TASK_RUNNING)
 		return task_run(cur_task);
 
+	#ifdef BONUS_SLEEP_TIME
 	if (sleepq.root) {
 		while(list_is_empty(&runq)) wakeup();
 		return sched_yield();
 	}
+	#endif
 
 	cprintf("No runnable tasks!\n");
 	halt_kernel();
@@ -115,4 +119,8 @@ void sched_sleep(uint64_t ns) {
 	rb_sleep_insert(&sleepq, task, NULL);
 	cur_task = NULL;
 	sched_yield();
+}
+
+void sched_kick_from_bed(struct task *task) {
+	rb_remove(&sleepq, &task->task_sleep_rb);
 }
