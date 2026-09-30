@@ -16,6 +16,7 @@ enum {
 	TASK_RUNNABLE,
 	TASK_RUNNING,
 	TASK_NOT_RUNNABLE,
+	TASK_SLEEPING,
 };
 
 /* The method of interrupt used to switch to the kernel. */
@@ -54,6 +55,10 @@ struct task {
 
 	/* TSC value when the task most recently started running. */
 	uint64_t task_start_tsc;
+
+	/* The TSC value when the task should wake up. */
+	uint64_t task_wakeup_tsc;
+	struct rb_node task_sleep_rb;
 
 	/* The exit status of the task in case it has died */
 	int task_exit_status;

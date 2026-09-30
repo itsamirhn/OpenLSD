@@ -111,9 +111,20 @@ static int sys_clock_gettime(clockid_t clock, struct timespec *ts) {
 }
 
 static int sys_clock_nanosleep(clockid_t clock, int flags, const struct timespec *req) {
-	// TODO
-	return -ENOSYS;
+	if (clock != CLOCK_REALTIME && clock != CLOCK_MONOTONIC) return -EINVAL;
+	assert_user_mem(cur_task, (void *)req, sizeof *req, PROT_READ);
+	if (req->tv_sec < 0 || req->tv_nsec < 0 || req->tv_nsec >= NSEC_PER_SEC) return -EINVAL;
+	uint64_t ns = req->tv_sec * NSEC_PER_SEC + req->tv_nsec;
+	if (flags & TIMER_ABSTIME) {
+		struct timespec now;
+		if (clock == CLOCK_REALTIME) time_now(&now);
+		else time_monotonic(&now);
+		ns -= now.tv_sec * NSEC_PER_SEC + now.tv_nsec;
+	}
+	if (ns > 0) sched_sleep(ns);
+	return 0;
 }
+
 
 static int sys_kill(pid_t pid)
 {
