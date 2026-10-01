@@ -1,0 +1,11 @@
+name: Sleep - clock_nanosleep()
+description: Relative and absolute sleeps on both clocks, past deadlines
+points: 0.5
+bonus: SLEEP_TIME
+regexlines:
+  - 'relative CLOCK_MONOTONIC ok'
+  - 'relative CLOCK_REALTIME ok'
+  - 'absolute CLOCK_MONOTONIC ok'
+  - 'absolute CLOCK_REALTIME ok'
+  - 'absolute deadline in the past ok'
+  - '.PID     1. Exiting gracefully with code 0'
