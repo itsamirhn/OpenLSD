@@ -1,0 +1,6 @@
+name: Scheduler - Forking Does Not Starve Others
+description: A task that keeps handing its work to freshly forked children must not get more CPU than a plain CPU-bound task
+points: 0.5
+regexlines:
+  - 'forking does not starve other tasks'
+  - '.PID     1. Exiting gracefully with code 0'
