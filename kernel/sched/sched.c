@@ -85,8 +85,10 @@ void sched_yield(void)
 		return task_run(best_task);
 	}
 	
-	if (cur_task && cur_task->task_status == TASK_RUNNING)
+	if (cur_task && cur_task->task_status == TASK_RUNNING) {
+		cur_task->task_start_tsc = read_tsc();
 		return task_run(cur_task);
+	}
 
 	#ifdef BONUS_SLEEP_TIME
 	if (sleepq.root) {
