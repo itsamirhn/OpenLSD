@@ -1,0 +1,7 @@
+name: Kill - Return Value
+description: Killing a child returns 0 to the caller, and the killed child can still be reaped
+points: 0.5
+regexlines:
+  - 'kill returned 0'
+  - 'killed child reaped'
+  - '.PID     1. Exiting gracefully with code 0'

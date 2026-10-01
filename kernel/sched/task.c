@@ -495,9 +495,10 @@ void task_destroy(struct task *task)
 		}
 	} else task_free(task);
 
-	if (task == cur_task) cur_task = NULL;
-
-	sched_yield();
+	if (task == cur_task) {
+		cur_task = NULL;
+		sched_yield();
+	}
 }
 
 /*
