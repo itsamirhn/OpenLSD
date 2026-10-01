@@ -15,6 +15,17 @@ On the stack of the function we make a replacement task, which is used to set up
 
 For Zero deduplication we point to one global zero page when we page fault on non present or non written pages. task_shared_file_fault() is used to point to the physical pages used by the kernel for the user binary
 
+## Sleep and Time
+##### MACRO = BONUS_SLEEP_TIME
+
+All time keeping is based on the TSC. At boot, time_init() calibrates the TSC frequency against the HPET over 10ms and reads the RTC once to get the Unix time at that moment. time_monotonic() converts the TSC ticks since boot into a timespec, and time_now() adds the boot epoch on top of it. Since we never set the clock, CLOCK_REALTIME is simply CLOCK_MONOTONIC plus a fixed offset.
+
+clock_gettime() supports both clocks, and gettimeofday() and time() are thin wrappers around it. With the vDSO enabled, these run entirely in user space, because the kernel exports the TSC base, the TSC frequency and the boot epoch in vvar and __vdso_clock_gettime() does the same calculation with rdtsc. Without the vDSO they fall back to the syscall.
+
+For sleeping, clock_nanosleep() is the only new syscall. nanosleep() calls it with CLOCK_MONOTONIC, while usleep() and sleep() just build a timespec and call nanosleep(). The kernel validates the timespec, and when TIMER_ABSTIME is set it subtracts the current time of the chosen clock, so a deadline that has already passed returns right away. There are no signals, so a sleep is never interrupted and rem is never written.
+
+The sleeping tasks are kept in a red-black tree, ordered by the TSC value at which they have to wake up. sched_sleep() marks the task as TASK_SLEEPING, sets its syscall return value to 0, inserts it into the tree and calls the scheduler. At the start of every sched_yield(), which also runs on every timer tick, wakeup() takes the tasks whose deadline has passed from the left end of the tree and puts them on the run queue. If only sleeping tasks are left, the scheduler busy-waits until the first one is due instead of halting. When a sleeping task gets killed, task_destroy() removes it from the tree as well.
+
 
 ------------------------------------------------
 # LAB 4 bonus
