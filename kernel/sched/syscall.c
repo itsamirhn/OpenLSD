@@ -119,9 +119,10 @@ static int sys_clock_nanosleep(clockid_t clock, int flags, const struct timespec
 		struct timespec now;
 		if (clock == CLOCK_REALTIME) time_now(&now);
 		else time_monotonic(&now);
+		if (now.tv_sec * NSEC_PER_SEC + now.tv_nsec > ns) return 0;
 		ns -= now.tv_sec * NSEC_PER_SEC + now.tv_nsec;
 	}
-	if (ns > 0) sched_sleep(ns);
+	sched_sleep(ns);
 	return 0;
 }
 

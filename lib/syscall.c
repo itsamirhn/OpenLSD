@@ -108,7 +108,11 @@ time_t time(time_t *t) {
 }
 
 int clock_nanosleep(clockid_t clock, int flags, const struct timespec *req, struct timespec *rem) {
+	#ifdef BONUS_SLEEP_TIME
 	return syscall(SYS_clock_nanosleep, 0, clock, flags, (uintptr_t)req, 0, 0, 0);
+	#else
+	return -ENOSYS;
+	#endif
 }
 
 int nanosleep(const struct timespec *req, struct timespec *rem) {

@@ -10,4 +10,4 @@ regexlines:
   - '.PID     1. Exiting gracefully'
   - '.PID     1. Freed task with PID 1'
   - '.PID     2. Exiting gracefully'
-  - '.PID     [1|2]. Freed task with PID 2'
+  - '.PID     [12]. Freed task with PID 2'
