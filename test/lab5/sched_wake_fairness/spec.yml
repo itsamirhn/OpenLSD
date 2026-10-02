@@ -1,0 +1,6 @@
+name: Scheduler - Woken Task Does Not Starve Others
+description: A task that was blocked for a long time must not monopolize the CPU to catch up once it wakes up
+points: 0.5
+regexlines:
+  - 'woken task does not starve others'
+  - '.PID     1. Exiting gracefully with code 0'
