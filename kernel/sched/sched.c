@@ -14,6 +14,8 @@ struct rb_tree sleepq;
 
 extern size_t nuser_tasks;
 
+static uint64_t min_karma;
+
 int rb_sleep_cmp(struct task *a, struct task *b) {
 	if (a->task_wakeup_tsc < b->task_wakeup_tsc) return -1;
 	if (a->task_wakeup_tsc > b->task_wakeup_tsc) return 1;
@@ -59,6 +61,7 @@ void sched_yield(void)
 
 	if (best_task) {
 		list_del(&best_task->task_node);
+		min_karma = MAX(min_karma, best_task->task_karma);
 		best_task->task_start_tsc = read_tsc();
 		return task_run(best_task);
 	}
@@ -86,6 +89,7 @@ void sched_halt()
 }
 
 void sched_enqueue(struct task *task) {
+	task->task_karma = MAX(task->task_karma, min_karma);
 	task->task_status = TASK_RUNNABLE;
 	list_add_tail(&runq, &task->task_node); 
 }
