@@ -90,6 +90,7 @@ void kmain(struct boot_info *boot_info)
 	lapic_init();
 	hpet_init(rsdp);
 	time_init();
+	mem_init_mp();
 
 
 	/* Set up the tasks. */

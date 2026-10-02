@@ -2,6 +2,7 @@
 #include <boot.h>
 #include <list.h>
 #include <paging.h>
+#include <cpu.h>
 
 #include <x86-64/asm.h>
 
@@ -180,7 +181,18 @@ void mem_init_mp(void)
 	/* Set up kernel stacks for each CPU here. Make sure they have a guard
 	 * page.
 	 */
-	/* LAB 6: your code here. */
+	for (uint32_t i = 0; i < ncpus; i++) {
+		struct cpuinfo *cpu = cpus + i;
+		if (cpu == boot_cpu) continue;
+		uint64_t stack_top = KSTACK_TOP - (KSTACK_SIZE + KSTACK_GAP) * i;
+		uint64_t stack_bottom = stack_top - KSTACK_SIZE;
+		for (uint64_t va = stack_bottom; va < stack_top; va += PAGE_SIZE) {
+			struct page_info *page = page_alloc(ALLOC_ZERO);
+			if (!page) panic("mem_init_mp: out of memory for CPU %d stack", i);
+			assert(page_insert(kernel_pml4, page, (void *)va, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
+		}
+		cpu->cpu_tss.rsp[0] = stack_top;
+	}
 }
 
 /*
