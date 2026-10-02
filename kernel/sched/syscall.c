@@ -198,8 +198,7 @@ int sys_exec(char *binary_name)
 
 static int sys_getcpuid(void)
 {
-	/* LAB 6: your code here. */
-	return 0;
+	return lapic_cpunum();
 }
 
 /* Dispatches to the correct kernel function, passing the arguments. */
@@ -251,6 +250,8 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 			return sys_clock_nanosleep((clockid_t)a1, (int)a2, (const struct timespec *)a3);
 		case SYS_exec:
 			return sys_exec((char *)a1);
+		case SYS_getcpuid:
+			return sys_getcpuid();
 		default:
 			return -ENOSYS;
 	}
