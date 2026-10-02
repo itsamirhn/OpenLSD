@@ -50,8 +50,8 @@ struct task {
 	/* The number of times the task has been run. */
 	unsigned task_runs;
 
-	/* Remaining TSC budget in the current scheduling round. */
-	uint64_t task_budget;
+	/* CPU time (in TSC ticks) the task has used, as seen by the scheduler. */
+	uint64_t task_karma;
 
 	/* TSC value when the task most recently started running. */
 	uint64_t task_start_tsc;

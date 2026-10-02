@@ -204,7 +204,7 @@ struct task *task_alloc(pid_t ppid)
 	task->task_type = TASK_TYPE_USER;
 	task->task_status = TASK_RUNNABLE;
 	task->task_runs = 0;
-	task->task_budget = 10000000;
+	task->task_karma = 0;
 	task->task_start_tsc = 0;
 
 	memset(&task->task_frame, 0, sizeof task->task_frame);

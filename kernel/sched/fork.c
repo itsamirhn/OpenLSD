@@ -66,8 +66,7 @@ pid_t sys_fork(void)
 	if (!task) return -ENOMEM;
 
 	task->task_frame.rax = 0;
-	task->task_budget = cur_task->task_budget >> 1;
-	cur_task->task_budget -= task->task_budget;
+	task->task_karma = cur_task->task_karma;
 	list_add(&cur_task->task_children, &task->task_child);
 
 	sched_enqueue(task);
