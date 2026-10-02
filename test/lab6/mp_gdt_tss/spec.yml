@@ -1,0 +1,11 @@
+name: GDT/TSS - Check per-cpu GDT and TSS Setup
+description: This test ensures each CPU either has its own GDT or separate TSS segments in a shared GDT.
+
+qemu: -smp 4 -m 2G
+timeout: 120
+
+regexlines:
+  - Running on CPU 0
+  - Running on CPU 1
+  - Running on CPU 2
+  - Running on CPU 3

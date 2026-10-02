@@ -4,6 +4,7 @@
 #include <types.h>
 #include <list.h>
 #include <rbtree.h>
+#include <spinlock.h>
 
 #include <x86-64/idt.h>
 #include <x86-64/memory.h>
@@ -88,4 +89,9 @@ struct task {
 
 	/* Where to store the exit status of the task we are waiting on. */
 	int *task_rstatus;
+
+#ifndef USE_BIG_KERNEL_LOCK
+	/* Per-task lock */
+	struct spinlock task_lock;
+#endif
 };

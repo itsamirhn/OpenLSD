@@ -179,3 +179,8 @@ int exec(char *binary_name)
 {
 	return syscall(SYS_exec, 0, (uintptr_t)binary_name, 0, 0, 0, 0, 0);
 }
+
+unsigned int getcpuid(void)
+{
+	return syscall(SYS_getcpuid, 0, 0, 0, 0, 0, 0, 0);
+}

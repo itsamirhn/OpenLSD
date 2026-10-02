@@ -99,6 +99,7 @@ unsigned int sleep(unsigned int seconds);
 void *vdso_sym(void *base, const char *name);
 #endif
 
+unsigned getcpuid(void);
 
 int mquery(struct vma_info *info, void *addr);
 void *mmap(void *addr, size_t len, int prot, int flags, int fd,

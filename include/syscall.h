@@ -20,5 +20,6 @@ enum {
 	SYS_fork,
 	SYS_exec,
 	SYS_clock_nanosleep,
+	SYS_getcpuid,
 	NSYSCALLS,
 };

@@ -1,5 +1,6 @@
 #include <lib.h>
 #include <types.h>
+#include <cpu.h>
 #include <list.h>
 #include <stdio.h>
 #include <x86-64/asm.h>
@@ -11,6 +12,14 @@
 
 struct rb_tree runq;
 struct rb_tree sleepq;
+
+#ifndef USE_BIG_KERNEL_LOCK
+struct spinlock runq_lock = {
+#ifdef DEBUG_SPINLOCK
+	.name = "runq_lock",
+#endif
+};
+#endif
 
 extern size_t nuser_tasks;
 
@@ -45,6 +54,10 @@ void wakeup(void) {
 		rb_remove(&sleepq, &task->task_sched_rb);
 		sched_enqueue(task);
 	}
+}
+void sched_init_mp(void)
+{
+	/* LAB 6: your code here. */
 }
 
 /* Runs the next runnable task. */

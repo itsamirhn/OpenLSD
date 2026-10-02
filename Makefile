@@ -216,6 +216,10 @@ KERNEL_CFLAGS += -DKERNEL_VMA=0xFFFF800000000000
 # mixing user and kernel code.
 KERNEL_CFLAGS += -DOpenLSD_KERNEL
 
+# This allows us to choose between BKL and fine-grained locking for the kernel
+ifeq ($(BIG_KERNEL_LOCK),1)
+KERNEL_CFLAGS += -DUSE_BIG_KERNEL_LOCK
+endif
 
 # Linker flags
 KERNEL_LDFLAGS := -n                   # Specific output format
