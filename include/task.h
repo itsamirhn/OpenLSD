@@ -52,15 +52,16 @@ struct task {
 
 	/* CPU time (in TSC ticks) the task has used, as seen by the scheduler. */
 	uint64_t task_karma;
-	/* The node in the run queue, which is ordered by karma. */
-	struct rb_node task_karma_rb;
 
 	/* TSC value when the task most recently started running. */
 	uint64_t task_start_tsc;
 
 	/* The TSC value when the task should wake up. */
 	uint64_t task_wakeup_tsc;
-	struct rb_node task_sleep_rb;
+
+	/* The node in the run queue (ordered by karma) when the task is runnable
+	 * The node in the sleep queue (ordered by wakeup time) when it sleeps */
+	struct rb_node task_sched_rb;
 
 	/* The exit status of the task in case it has died */
 	int task_exit_status;

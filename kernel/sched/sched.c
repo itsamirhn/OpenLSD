@@ -22,7 +22,7 @@ int rb_sleep_cmp(struct task *a, struct task *b) {
 	return 0;
 }
 
-RB_DEFINE_INSERT_FUNC(struct task, rb_sleep_insert, rb_sleep_cmp, task_sleep_rb)
+RB_DEFINE_INSERT_FUNC(struct task, rb_sleep_insert, rb_sleep_cmp, task_sched_rb)
 
 int rb_karma_cmp(struct task *a, struct task *b) {
 	if (a->task_karma < b->task_karma) return -1;
@@ -30,7 +30,7 @@ int rb_karma_cmp(struct task *a, struct task *b) {
 	return 0;
 }
 
-RB_DEFINE_INSERT_FUNC(struct task, rb_runq_insert, rb_karma_cmp, task_karma_rb)
+RB_DEFINE_INSERT_FUNC(struct task, rb_runq_insert, rb_karma_cmp, task_sched_rb)
 
 void sched_init(void)
 {
@@ -40,9 +40,9 @@ void sched_init(void)
 
 void wakeup(void) {
 	while (sleepq.root) {
-		struct task *task = rb_first(&sleepq, struct task, task_sleep_rb);
+		struct task *task = rb_first(&sleepq, struct task, task_sched_rb);
 		if (task->task_wakeup_tsc > read_tsc()) break;
-		rb_remove(&sleepq, &task->task_sleep_rb);
+		rb_remove(&sleepq, &task->task_sched_rb);
 		sched_enqueue(task);
 	}
 }
@@ -58,8 +58,8 @@ void sched_yield(void)
 		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
 
 	if (runq.root) {
-		struct task *task = rb_first(&runq, struct task, task_karma_rb);
-		rb_remove(&runq, &task->task_karma_rb);
+		struct task *task = rb_first(&runq, struct task, task_sched_rb);
+		rb_remove(&runq, &task->task_sched_rb);
 		min_karma = MAX(min_karma, task->task_karma);
 		task->task_start_tsc = read_tsc();
 		return task_run(task);
@@ -90,12 +90,12 @@ void sched_halt()
 void sched_enqueue(struct task *task) {
 	task->task_karma = MAX(task->task_karma, min_karma);
 	task->task_status = TASK_RUNNABLE;
-	rb_node_init(&task->task_karma_rb);
+	rb_node_init(&task->task_sched_rb);
 	rb_runq_insert(&runq, task, NULL);
 }
 
 void sched_dequeue(struct task *task) {
-	rb_remove(&runq, &task->task_karma_rb);
+	rb_remove(&runq, &task->task_sched_rb);
 }
 
 void sched_sleep(uint64_t ns) {
@@ -103,12 +103,12 @@ void sched_sleep(uint64_t ns) {
 	task->task_status = TASK_SLEEPING;
 	task->task_wakeup_tsc = read_tsc() + ns * time_tsc_khz() / NSEC_PER_MSEC;
 	task->task_frame.rax = 0; // Sleep syscall return value after wakeup
-	rb_node_init(&task->task_sleep_rb);
+	rb_node_init(&task->task_sched_rb);
 	rb_sleep_insert(&sleepq, task, NULL);
 	cur_task = NULL;
 	sched_yield();
 }
 
 void sched_kick_from_bed(struct task *task) {
-	rb_remove(&sleepq, &task->task_sleep_rb);
+	rb_remove(&sleepq, &task->task_sched_rb);
 }
