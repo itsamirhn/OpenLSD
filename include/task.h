@@ -52,6 +52,8 @@ struct task {
 
 	/* CPU time (in TSC ticks) the task has used, as seen by the scheduler. */
 	uint64_t task_karma;
+	/* The node in the run queue, which is ordered by karma. */
+	struct rb_node task_karma_rb;
 
 	/* TSC value when the task most recently started running. */
 	uint64_t task_start_tsc;
@@ -80,7 +82,7 @@ struct task {
 	/* The zombies */
 	struct list task_zombies;
 
-	/* The anchor node (for zombies or the run queue) */
+	/* The anchor node (for zombies) */
 	struct list task_node;
 
 	/* Where to store the exit status of the task we are waiting on. */

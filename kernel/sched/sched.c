@@ -9,7 +9,7 @@
 #include <kernel/monitor.h>
 #include <kernel/sched.h>
 
-struct list runq;
+struct rb_tree runq;
 struct rb_tree sleepq;
 
 extern size_t nuser_tasks;
@@ -24,19 +24,25 @@ int rb_sleep_cmp(struct task *a, struct task *b) {
 
 RB_DEFINE_INSERT_FUNC(struct task, rb_sleep_insert, rb_sleep_cmp, task_sleep_rb)
 
+int rb_karma_cmp(struct task *a, struct task *b) {
+	if (a->task_karma < b->task_karma) return -1;
+	if (a->task_karma > b->task_karma) return 1;
+	return 0;
+}
+
+RB_DEFINE_INSERT_FUNC(struct task, rb_runq_insert, rb_karma_cmp, task_karma_rb)
+
 void sched_init(void)
 {
-	list_init(&runq);
+	rb_init(&runq);
 	rb_init(&sleepq);
 }
 
 void wakeup(void) {
 	while (sleepq.root) {
-		struct rb_node *first = sleepq.root;
-		while (first->left) first = first->left;
-		struct task *task = container_of(first, struct task, task_sleep_rb);
+		struct task *task = rb_first(&sleepq, struct task, task_sleep_rb);
 		if (task->task_wakeup_tsc > read_tsc()) break;
-		rb_remove(&sleepq, first);
+		rb_remove(&sleepq, &task->task_sleep_rb);
 		sched_enqueue(task);
 	}
 }
@@ -44,9 +50,6 @@ void wakeup(void) {
 /* Runs the next runnable task. */
 void sched_yield(void)
 {
-	struct list *node;
-	struct task *best_task = NULL;
-
 	#ifdef BONUS_SLEEP_TIME
 	wakeup();
 	#endif
@@ -54,16 +57,12 @@ void sched_yield(void)
 	if (cur_task && cur_task->task_status == TASK_RUNNING)
 		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
 
-	list_foreach(&runq, node) {
-		struct task *task = container_of(node, struct task, task_node);
-		if (!best_task || task->task_karma < best_task->task_karma) best_task = task;
-	}
-
-	if (best_task) {
-		list_del(&best_task->task_node);
-		min_karma = MAX(min_karma, best_task->task_karma);
-		best_task->task_start_tsc = read_tsc();
-		return task_run(best_task);
+	if (runq.root) {
+		struct task *task = rb_first(&runq, struct task, task_karma_rb);
+		rb_remove(&runq, &task->task_karma_rb);
+		min_karma = MAX(min_karma, task->task_karma);
+		task->task_start_tsc = read_tsc();
+		return task_run(task);
 	}
 	
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
@@ -73,7 +72,7 @@ void sched_yield(void)
 
 	#ifdef BONUS_SLEEP_TIME
 	if (sleepq.root) {
-		while(list_is_empty(&runq)) wakeup();
+		while (!runq.root) wakeup();
 		return sched_yield();
 	}
 	#endif
@@ -91,7 +90,12 @@ void sched_halt()
 void sched_enqueue(struct task *task) {
 	task->task_karma = MAX(task->task_karma, min_karma);
 	task->task_status = TASK_RUNNABLE;
-	list_add_tail(&runq, &task->task_node); 
+	rb_node_init(&task->task_karma_rb);
+	rb_runq_insert(&runq, task, NULL);
+}
+
+void sched_dequeue(struct task *task) {
+	rb_remove(&runq, &task->task_karma_rb);
 }
 
 void sched_sleep(uint64_t ns) {

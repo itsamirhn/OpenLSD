@@ -311,3 +311,8 @@ void rb_fix_tree_insert(struct rb_tree* root, struct rb_node* newNode);
  *       for managing the memory of the containing structure.
  */
 void rb_remove(struct rb_tree* root, struct rb_node* nodeToRemove);
+
+struct rb_node *rb_tree_minimum(struct rb_tree *root, struct rb_node *x);
+
+/* Returns the entry with the smallest key in the tree, or NULL if the tree is empty. */
+#define rb_first(tree, type, rb_node_member) ((tree)->root ? container_of(rb_tree_minimum((tree), (tree)->root), type, rb_node_member) : NULL)

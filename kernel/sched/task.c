@@ -471,6 +471,7 @@ void task_free(struct task *task)
 void task_destroy(struct task *task)
 {
 	list_del(&task->task_node);
+	if (task->task_status == TASK_RUNNABLE) sched_dequeue(task);
 
 	#ifdef BONUS_SLEEP_TIME
 	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
