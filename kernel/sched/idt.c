@@ -189,7 +189,7 @@ void idt_init(void)
 
 void idt_init_mp(void)
 {
-	/* LAB 6: your code here. */
+	load_idt(&idtr);
 }
 
 void int_dispatch(struct int_frame *frame)

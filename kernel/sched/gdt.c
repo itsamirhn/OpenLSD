@@ -24,17 +24,14 @@ void gdt_init(void)
 	/* Set up the kernel stack pointer in the TSS. Add the TSS to the GDT.
 	 * Load the GDT and the task selector.
 	 */
-	/* LAB 6: your code here. */
-	this_cpu->cpu_tss.rsp[0] = KSTACK_TOP;
-
-	set_tss_entry((struct tss_entry *)(gdt_entries + (GDT_TSS0 >> 3)),
+	uint16_t tss_sel = GDT_TSS0 + lapic_cpunum() * sizeof(struct tss_entry);
+	set_tss_entry((struct tss_entry *)(gdt_entries + (tss_sel >> 3)),
 	    &this_cpu->cpu_tss);
 	load_gdt(&gdtr, GDT_KCODE, GDT_KDATA);
-	load_task_sel(GDT_TSS0);
+	load_task_sel(tss_sel);
 }
 
 void gdt_init_mp(void)
 {
-	/* LAB 6: your code here. */
+	return gdt_init();
 }
-

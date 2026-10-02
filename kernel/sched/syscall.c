@@ -35,7 +35,7 @@ void syscall_init(void)
 
 void syscall_init_mp(void)
 {
-	/* LAB 6: your code here - of course only if you implemented the SYSCALL bonus. */
+	return syscall_init();
 }
 
 static inline void protected_copy(void *dst, const void *src, size_t len)

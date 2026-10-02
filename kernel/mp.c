@@ -54,12 +54,16 @@ void mp_main(void)
 
 	cprintf("SMP: CPU %d starting\n", lapic_cpunum());
 
-	/* LAB 6: your code here. */
 	/* Initialize the local APIC. */
+	lapic_init();
 
 	/* Set up segmentation, interrupts, system call support. */
+	gdt_init_mp();
+	idt_init_mp();
+	syscall_init_mp();
 
 	/* Set up the per-CPU slab allocator. */
+	kmem_init_mp();
 
 	/* Set up the per-CPU scheduler. */
 	/* Notify the main CPU that we started up. */

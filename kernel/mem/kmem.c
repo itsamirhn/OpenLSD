@@ -13,6 +13,7 @@ int kmem_init(void)
 	struct slab *slab;
 	size_t obj_size;
 	size_t i;
+	nslabs = sizeof slabs / sizeof *slabs;
 	for (i = 0; i < nslabs; ++i) {
 		slab = slabs + i;
 		obj_size = (i + 1) * SLAB_ALIGN;
@@ -24,8 +25,7 @@ int kmem_init(void)
 
 int kmem_init_mp(void)
 {
-	/* LAB 6: your code here. */
-	return 0;
+	return kmem_init();
 }
 
 /* Allocates a chunk of memory of size bytes.
