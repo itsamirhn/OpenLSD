@@ -92,10 +92,11 @@ void kmain(struct boot_info *boot_info)
 	time_init();
 	mem_init_mp();
 
-
 	/* Set up the tasks. */
 	task_init();
 	sched_init();
+
+	boot_cpus();
 
 	/// If test does not come with a binary to run, try to find a user-specified one
 	if(binary == NULL)
