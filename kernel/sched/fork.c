@@ -80,7 +80,10 @@ pid_t sys_fork(void)
 
 	task->task_frame.rax = 0;
 	task->task_karma = cur_task->task_karma + read_tsc() - cur_task->task_start_tsc;
+	
+	fine_spin_lock(&cur_task->task_lock);
 	list_add(&cur_task->task_children, &task->task_child);
+	fine_spin_unlock(&cur_task->task_lock);
 
 	sched_enqueue(task);
 

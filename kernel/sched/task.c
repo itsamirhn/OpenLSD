@@ -491,6 +491,7 @@ void task_destroy(struct task *task)
 
 	if (!list_is_empty(&task->task_child)) {
 		struct task *parent = pid2task(task->task_ppid, 0);
+		fine_spin_lock(&parent->task_lock);
 		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
 			if (parent->task_rstatus) {
 				// rstatus lives in the parent's address space
@@ -506,6 +507,7 @@ void task_destroy(struct task *task)
 			task->task_status = TASK_DYING;
 			list_add(&parent->task_zombies, &task->task_node);
 		}
+		fine_spin_unlock(&parent->task_lock);
 	} else task_free(task);
 
 	if (task == cur_task) {
