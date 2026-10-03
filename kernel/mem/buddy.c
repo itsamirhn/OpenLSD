@@ -3,6 +3,7 @@
 #include <paging.h>
 #include <spinlock.h>
 #include <string.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 
@@ -146,7 +147,7 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 struct page_info *buddy_merge(struct page_info *page)
 {
 	assert(fine_spin_haslock(&buddy_lock));
-	
+
 	assert(page->pp_free == 1);
 	assert(page->pp_order < BUDDY_MAX_ORDER);
 	if (page->pp_order == BUDDY_MAX_ORDER - 1) {
@@ -312,11 +313,10 @@ void page_free(struct page_info *pp)
  */
 void page_decref(struct page_info *pp)
 {
+	uint16_t old = atomic_dec(&pp->pp_ref);
 	// Sanity check to help catch some sneaky bugs
-	assert(pp->pp_ref > 0);
-	if (--pp->pp_ref == 0) {
-		page_free(pp);
-	}
+	assert(old > 0);
+	if (old == 1) page_free(pp);
 }
 
 static int in_page_range(void *p)
