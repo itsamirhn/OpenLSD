@@ -66,6 +66,8 @@ void mp_main(void)
 	kmem_init_mp();
 
 	/* Set up the per-CPU scheduler. */
+	sched_init_mp();
+
 	/* Notify the main CPU that we started up. */
 	xchg(&this_cpu->cpu_status, CPU_STARTED);
 
