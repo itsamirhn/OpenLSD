@@ -19,6 +19,10 @@
 #include <kernel/test/test.h>
 #include <kernel/symbols.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
+
 
 uint8_t *find_user_binary() {
 	// Find the binary to run from the QEMU fw_cfg parameters
@@ -96,6 +100,7 @@ void kmain(struct boot_info *boot_info)
 	task_init();
 	sched_init();
 
+	big_spin_lock(&kernel_lock);
 	boot_cpus();
 
 	/// If test does not come with a binary to run, try to find a user-specified one

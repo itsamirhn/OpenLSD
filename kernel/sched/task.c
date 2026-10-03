@@ -14,6 +14,9 @@
 #include <kernel/sched.h>
 #include <kernel/vma.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
 
 pid_t pid_max = 1 << 16;
 struct task **tasks = (struct task **)PIDMAP_BASE;
@@ -511,11 +514,16 @@ void task_destroy(struct task *task)
  */
 void task_pop_frame(struct int_frame *frame)
 {
-	switch (frame->int_no) {
+	struct int_frame f = *frame; // copy the frame to the stack because of lock release
+
+	assert(big_spin_haslock(&kernel_lock));
+	big_spin_unlock(&kernel_lock);
+
+	switch (f.int_no) {
 #ifdef BONUS_SYSCALL
-		case 0x80: sysret64(frame); break;
+		case 0x80: sysret64(&f); break;
 #endif
-		default: iret64(frame); break;
+		default: iret64(&f); break;
 	}
 
 	panic("We should have gone back to userspace!");

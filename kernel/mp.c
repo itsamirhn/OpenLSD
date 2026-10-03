@@ -6,6 +6,9 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
 
 /* While boot_cpus() is booting a given CPU, it communicates the per-core stack
  * pointer that should be loaded by boot_ap().
@@ -14,6 +17,8 @@ void *mpentry_kstack;
 
 void boot_cpus(void)
 {
+	assert(big_spin_haslock(&kernel_lock));
+	
 	extern unsigned char boot_ap16[], boot_ap_end[];
 	void *code;
 	struct cpuinfo *cpu;
@@ -72,9 +77,6 @@ void mp_main(void)
 	xchg(&this_cpu->cpu_status, CPU_STARTED);
 
 	/* Schedule tasks. */
-	/* LAB 6: remove this code when you are ready */
-	asm volatile(
-		"cli\n"
-		"hlt\n");
+	big_spin_lock(&kernel_lock);
 	sched_yield();
 }

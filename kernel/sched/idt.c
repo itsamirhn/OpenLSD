@@ -14,7 +14,9 @@
 #include <kernel/sched/task.h>
 #include <kernel/vma/pfault.h>
 
-
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
 
 #define DECL_ISR(int_no) extern void isr##int_no(void)
 
@@ -251,6 +253,8 @@ void int_handler(struct int_frame *frame)
 	if ((frame->cs & 3) == 3) {
 		/* Interrupt from user mode. */
 		assert(cur_task);
+
+		big_spin_lock(&kernel_lock);
 
 		/* Copy interrupt frame (which is currently on the stack) into
 		 * 'cur_task->task_frame', so that running the task will restart at

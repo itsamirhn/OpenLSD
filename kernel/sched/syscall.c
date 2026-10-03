@@ -16,6 +16,10 @@
 #include <kernel/vma.h>
 #include <kernel/symbols.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
+
 extern void syscall64(void);
 
 void syscall_init(void)
@@ -264,6 +268,8 @@ void syscall_handler(uint64_t a1, uint64_t a2, uint64_t a3,
 
 	/* Syscall from user mode. */
 	assert(cur_task);
+
+	big_spin_lock(&kernel_lock);
 
 	/* Avoid using the frame on the stack. */
 	frame = &cur_task->task_frame;
