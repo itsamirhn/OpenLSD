@@ -2,6 +2,7 @@
 #include <types.h>
 #include <paging.h>
 #include <error.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 
@@ -22,7 +23,7 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct insert_info *info = walker->udata;
 	struct page_info *page;
 
-	info->page->pp_ref++; // Because of same page re-insert, increment the reference count first
+	atomic_inc(&info->page->pp_ref);  // Because of same page re-insert, increment the reference count first
 
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
@@ -55,7 +56,7 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *page;
 	struct page_table *table;
 
-	info->page->pp_ref++; // Because of same page re-insert, increment the reference count first
+	atomic_inc(&info->page->pp_ref); // Because of same page re-insert, increment the reference count first
 	if (*entry & PAGE_PRESENT) {
 		page = pa2page(PAGE_ADDR(*entry));
 		if (*entry & PAGE_HUGE) {

@@ -4,6 +4,7 @@
 #include <paging.h>
 #include <string.h>
 #include <error.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 #include <kernel/mem/slab.h>
@@ -51,7 +52,7 @@ int slab_alloc_chunk(struct slab *slab)
 	page = page_alloc(ALLOC_ZERO);
 	if (page == NULL) return -ENOMEM;
 
-	page->pp_ref++;
+	atomic_inc(&page->pp_ref);
 	base = page2kva(page);
 	info = (struct slab_info *)(base + slab->info_off);
 	info->slab = slab;

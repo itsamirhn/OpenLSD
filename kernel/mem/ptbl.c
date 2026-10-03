@@ -3,6 +3,7 @@
 #include <string.h>
 #include <paging.h>
 #include <error.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 
@@ -26,7 +27,7 @@ int ptbl_alloc(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	}
 
 	*entry = page2pa(page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
-	page->pp_ref++;
+	atomic_inc(&page->pp_ref);
 	
 	return 0;
 }
@@ -70,7 +71,7 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	struct page_info *huge_page = pa2page(PAGE_ADDR(*entry));
 	struct page_info *ptbl_page = page_alloc(ALLOC_ZERO); if (ptbl_page == NULL) return -ENOMEM;
-	ptbl_page->pp_ref++;
+	atomic_inc(&ptbl_page->pp_ref);
 	struct page_table *ptbl = page2kva(ptbl_page);
 	uint64_t flags = *entry & PAGE_UMASK;
 
@@ -82,7 +83,7 @@ int ptbl_split(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	for (int i = 0; i < PAGE_TABLE_ENTRIES; i++) {
 		struct page_info *p = page_alloc(ALLOC_ZERO); if (p == NULL) return -ENOMEM;
-		p->pp_ref++;
+		atomic_inc(&p->pp_ref);
 		memcpy(page2kva(p), page2kva(huge_page) + (i * PAGE_SIZE), PAGE_SIZE);
 		ptbl->entries[i] = page2pa(p) | flags;
 	}
@@ -136,7 +137,7 @@ int ptbl_merge(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	}
 
 	struct page_info *huge_page = page_alloc(ALLOC_ZERO | ALLOC_HUGE); if (huge_page == NULL) return -ENOMEM;
-	huge_page->pp_ref++;
+	atomic_inc(&huge_page->pp_ref);
 	for (uint32_t i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) memcpy(page2kva(huge_page + i), page2kva(pa2page(PAGE_ADDR(ptbl->entries[i]))), PAGE_SIZE);
 
 	*entry = page2pa(huge_page) | flags | PAGE_HUGE;

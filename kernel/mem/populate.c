@@ -1,7 +1,8 @@
 
-#include "error.h"
+#include <error.h>
 #include <types.h>
 #include <paging.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 
@@ -21,7 +22,7 @@ static int populate_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	page = page_alloc(ALLOC_ZERO);
 	if (page == NULL) return -ENOMEM;
-	page->pp_ref++;
+	atomic_inc(&page->pp_ref);
 	*entry = page2pa(page) | (info->flags & ~(uint64_t)PAGE_HUGE) | PAGE_PRESENT;
 
 	return 0;
@@ -37,7 +38,7 @@ static int populate_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	if (!(*entry & PAGE_PRESENT) && info->base <= base && end <= info->end) {
 		page = page_alloc(ALLOC_ZERO | ALLOC_HUGE);
 		if (page == NULL) return -ENOMEM;
-		page->pp_ref++;
+		atomic_inc(&page->pp_ref);
 		*entry = page2pa(page) | (info->flags) | PAGE_PRESENT | PAGE_HUGE;
 		return 0;
 	}

@@ -1,6 +1,7 @@
 
 #include <types.h>
 #include <error.h>
+#include <atomic.h>
 
 #include <kernel/mem.h>
 #include <kernel/vma.h>
@@ -12,7 +13,7 @@ static int task_zero_fault(struct task *task, struct vma *vma, void *va) {
 	if (zero_page == NULL) {
 		zero_page = page_alloc(ALLOC_ZERO);
 		if (!zero_page) return -ENOMEM;
-		zero_page->pp_ref++; // Trick to avoid COW change this page in future
+		atomic_inc(&zero_page->pp_ref); // Trick to avoid COW change this page in future
 	}
 
 	return page_insert(task->task_pml4, zero_page, (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE), PAGE_PRESENT | PAGE_USER | (vma->vm_flags & VM_EXEC ? 0 : PAGE_NO_EXEC));
