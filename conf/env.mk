@@ -80,7 +80,7 @@ BONUS = #SLEEP_TIME SYSCALL EXEC_ZERO_DEDUP VDSO L1TF_MDS ASLR SMEP_SMAP  #PAGIN
 # Using the BIG_KERNEL_LOCK setting, you can switch between the
 # big kernel lock (1), or fine-grained locking (0). Make sure to
 # rebuild your kernel after changing this!
-BIG_KERNEL_LOCK = 1
+BIG_KERNEL_LOCK = 0
 
 # Using various FLAGS, it is possible to pass additional compilation
 # flags to the compiler or linker. For example, provide -DFOO to

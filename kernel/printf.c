@@ -11,6 +11,7 @@
 
 #ifndef USE_BIG_KERNEL_LOCK
 struct spinlock console_lock = {
+	.rank = RANK_CONSOLE,
 #ifdef DEBUG_SPINLOCK
 	.name = "console_lock",
 #endif
@@ -26,8 +27,9 @@ static void putch(int ch, int *cnt)
 int vcprintf(const char *fmt, va_list ap)
 {
 	int cnt = 0;
-
+	fine_spin_lock(&console_lock);
 	vprintfmt((void*)putch, &cnt, fmt, ap);
+	fine_spin_unlock(&console_lock);
 	return cnt;
 }
 

@@ -3,6 +3,9 @@
 
 #include <types.h>
 
+#define RANK_BUDDY    (1ULL << 1)
+#define RANK_CONSOLE  (1ULL << 2)
+
 struct cpuinfo;
 
 struct spinlock {
@@ -80,4 +83,3 @@ void __spin_unlock(struct spinlock *lock, const char *file, int line);
 #define fine_spin_haslock(lock) spin_haslock(lock)
 
 #endif
-

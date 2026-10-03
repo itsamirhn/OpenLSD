@@ -20,6 +20,7 @@ struct list buddy_free_list[BUDDY_MAX_ORDER];
 #ifndef USE_BIG_KERNEL_LOCK
 /* Lock for the buddy allocator. */
 struct spinlock buddy_lock = {
+	.rank = RANK_BUDDY,
 #ifdef DEBUG_SPINLOCK
 	.name = "buddy_lock",
 #endif
@@ -30,6 +31,8 @@ struct spinlock buddy_lock = {
  */
 size_t count_free_pages(size_t order)
 {
+	assert(fine_spin_haslock(&buddy_lock));
+
 	struct list *node;
 	size_t nfree_pages = 0;
 
@@ -100,6 +103,8 @@ size_t count_total_free_pages(void)
  */
 struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
 {
+	assert(fine_spin_haslock(&buddy_lock));
+
 	if (lhs == NULL) {
 		return NULL;
 	}
@@ -140,6 +145,8 @@ struct page_info *buddy_split(struct page_info *lhs, size_t req_order)
  */
 struct page_info *buddy_merge(struct page_info *page)
 {
+	assert(fine_spin_haslock(&buddy_lock));
+	
 	assert(page->pp_free == 1);
 	assert(page->pp_order < BUDDY_MAX_ORDER);
 	if (page->pp_order == BUDDY_MAX_ORDER - 1) {
@@ -184,6 +191,8 @@ struct page_info *buddy_merge(struct page_info *page)
  */
 struct page_info *buddy_find(size_t req_order)
 {
+	assert(fine_spin_haslock(&buddy_lock));
+
 	if (req_order >= BUDDY_MAX_ORDER) {
 		return NULL;
 	}
@@ -223,7 +232,9 @@ struct page_info *page_alloc(int alloc_flags)
 		order = BUDDY_2M_PAGE;
 	}
 
+	fine_spin_lock(&buddy_lock);
 	struct page_info *page = buddy_find(order);
+	fine_spin_unlock(&buddy_lock);
 	
 	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
 	if(page != NULL){
@@ -264,16 +275,6 @@ void page_free(struct page_info *pp)
 		if (((void *)pp - (void *)pages) % sizeof *pages) {
 				panic("Invalid free detected; %p is not page_info-aligned", pp);
 		}
-		
-		if (pp->pp_order >= BUDDY_MAX_ORDER) {
-				panic("Invalid free detected; %p is not a block header", pp);
-		}
-	#endif
-
-	#ifdef BONUS_DOUBLE_FREE
-		if (pp->pp_free == 1) {
-			panic("Double free detected for page %p", page2pa(pp));
-		}
 	#endif
 
 	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
@@ -283,10 +284,26 @@ void page_free(struct page_info *pp)
 		}
 	#endif
 
+	fine_spin_lock(&buddy_lock);
+
+	#ifdef BONUS_INVALID_FREE
+		if (pp->pp_order >= BUDDY_MAX_ORDER) {
+			panic("Invalid free detected; %p is not a block header", pp);
+		}
+	#endif
+
+	#ifdef BONUS_DOUBLE_FREE
+		if (pp->pp_free == 1) {
+			panic("Double free detected for page %p", page2pa(pp));
+		}
+	#endif
+
 	assert(pp->pp_ref == 0);
 	pp->pp_free = 1;
 
 	buddy_merge(pp);
+
+	fine_spin_unlock(&buddy_lock);
 }
 
 /*
