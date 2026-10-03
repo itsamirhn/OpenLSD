@@ -2,6 +2,7 @@
 #include <cpu.h>
 #include <error.h>
 #include <list.h>
+#include <atomic.h>
 
 #include <kernel/console.h>
 #include <kernel/mem.h>
@@ -42,9 +43,9 @@ struct task *task_clone(struct task *task)
 {
 	struct task *child = task_alloc(task->task_pid);
 	if (!child) return NULL;
-	
+
 	child->task_type = task->task_type;                        /* child inherits parent's type */
-	if (child->task_type == TASK_TYPE_USER) nuser_tasks++;
+	if (child->task_type == TASK_TYPE_USER) atomic_inc(&nuser_tasks);
 
 	memcpy(&child->task_frame, &task->task_frame, sizeof child->task_frame);
 

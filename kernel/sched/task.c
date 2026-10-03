@@ -5,6 +5,7 @@
 #include <task.h>
 #include <cpu.h>
 #include <lib.h>
+#include <atomic.h>
 #ifdef BONUS_VDSO
 #include <vdso.h>
 #endif
@@ -209,6 +210,8 @@ struct task *task_alloc(pid_t ppid)
 	task->task_runs = 0;
 	task->task_karma = 0;
 	task->task_start_tsc = 0;
+	
+	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
 
 	memset(&task->task_frame, 0, sizeof task->task_frame);
 
@@ -370,7 +373,7 @@ void task_create(uint8_t *binary, enum task_type type)
 	task->task_type = type;
 	assert(task_load_elf(task, binary) == 0);
 	
-	if (type == TASK_TYPE_USER) nuser_tasks++;
+	if (type == TASK_TYPE_USER) atomic_inc(&nuser_tasks);
 	
 	sched_enqueue(task);
 }
@@ -465,7 +468,10 @@ void task_free(struct task *task)
 
 	free_all_vmas(task);
 
-	if (task->task_type == TASK_TYPE_USER) assert(nuser_tasks-- > 0);
+	if (task->task_type == TASK_TYPE_USER) {
+		size_t old = atomic_dec(&nuser_tasks);
+		assert(old > 0);
+	}
 
 	/* Free the task. */
 	kfree(task);
