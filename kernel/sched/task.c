@@ -211,7 +211,9 @@ struct task *task_alloc(pid_t ppid)
 	task->task_karma = 0;
 	task->task_start_tsc = 0;
 	
+#ifndef USE_BIG_KERNEL_LOCK
 	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
+#endif
 
 	memset(&task->task_frame, 0, sizeof task->task_frame);
 
