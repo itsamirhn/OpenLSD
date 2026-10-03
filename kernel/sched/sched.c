@@ -10,6 +10,10 @@
 #include <kernel/monitor.h>
 #include <kernel/sched.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
+
 struct rb_tree runq;
 struct rb_tree sleepq;
 
@@ -90,14 +94,20 @@ void sched_yield(void)
 	}
 	#endif
 
-	cprintf("No runnable tasks!\n");
-	halt_kernel();
+	sched_halt();
 }
 
 /* For now jump into the kernel monitor. */
 void sched_halt()
 {
-	halt_kernel();
+	if (nuser_tasks == 0) {
+		cprintf("No runnable tasks!\n");
+		halt_kernel();
+	} else {
+		this_cpu->cpu_status = CPU_HALTED;
+		big_spin_unlock(&kernel_lock);
+		asm volatile("sti; hlt");
+	}
 }
 
 void sched_enqueue(struct task *task) {

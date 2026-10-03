@@ -266,10 +266,10 @@ void syscall_handler(uint64_t a1, uint64_t a2, uint64_t a3,
 {
 	struct int_frame *frame;
 
+	big_spin_lock(&kernel_lock);
+
 	/* Syscall from user mode. */
 	assert(cur_task);
-
-	big_spin_lock(&kernel_lock);
 
 	/* Avoid using the frame on the stack. */
 	frame = &cur_task->task_frame;

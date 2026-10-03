@@ -250,11 +250,11 @@ void int_handler(struct int_frame *frame)
 	 */
 	assert(!(read_rflags() & FLAGS_IF));
 	/* cprintf("Incoming INT frame at %p\n", frame); */
+
+	if ((frame->cs & 3) == 3 || this_cpu->cpu_status == CPU_HALTED) big_spin_lock(&kernel_lock);
 	if ((frame->cs & 3) == 3) {
 		/* Interrupt from user mode. */
 		assert(cur_task);
-
-		big_spin_lock(&kernel_lock);
 
 		/* Copy interrupt frame (which is currently on the stack) into
 		 * 'cur_task->task_frame', so that running the task will restart at
