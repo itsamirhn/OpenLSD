@@ -464,6 +464,9 @@ void task_free(struct task *task)
  	    task->task_pid);
 
 	free_all_vmas(task);
+
+	if (task->task_type == TASK_TYPE_USER) assert(nuser_tasks-- > 0);
+
 	/* Free the task. */
 	kfree(task);
 }

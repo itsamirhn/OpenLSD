@@ -9,6 +9,8 @@
 #include <kernel/sched.h>
 #include <kernel/vma.h>
 
+extern size_t nuser_tasks;
+
 struct cow_info {
 	struct page_table *pml4;
 	struct page_table *child_pml4;
@@ -40,23 +42,32 @@ struct task *task_clone(struct task *task)
 {
 	struct task *child = task_alloc(task->task_pid);
 	if (!child) return NULL;
+	
+	child->task_type = task->task_type;                        /* child inherits parent's type */
+	if (child->task_type == TASK_TYPE_USER) nuser_tasks++;
 
 	memcpy(&child->task_frame, &task->task_frame, sizeof child->task_frame);
 
 	struct list *node;
 	list_foreach(&task->task_mmap, node) {
 		struct vma *vma = container_of(node, struct vma, vm_mmap);
-		assert(add_executable_vma(child, vma->vm_name, vma->vm_base, vma->vm_end - vma->vm_base,vma->vm_flags, vma->vm_src, vma->vm_len, vma->vm_offset) != NULL);
+		if (add_executable_vma(child, vma->vm_name, vma->vm_base, vma->vm_end - vma->vm_base,vma->vm_flags, vma->vm_src, vma->vm_len, vma->vm_offset) == NULL) {
+			task_free(child);
+			return NULL;
+		}
 	}
 
-	assert(walk_user_pages(task->task_pml4, &(struct page_walker) {
+	if (walk_user_pages(task->task_pml4, &(struct page_walker) {
 		.pte_callback = cow_share_pte,
 		.pde_callback = cow_share_pde,
 		.udata = &(struct cow_info) {
 			.pml4 = task->task_pml4,
 			.child_pml4 = child->task_pml4
 		}
-	}) == 0);
+	}) < 0) {
+		task_free(child);
+		return NULL;
+	}
 
 	return child;
 }
