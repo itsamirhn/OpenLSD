@@ -87,27 +87,28 @@ void sched_yield(void)
 		return task_run(cur_task);
 	}
 
-	#ifdef BONUS_SLEEP_TIME
-	if (sleepq.root) {
-		while (!runq.root) wakeup();
-		return sched_yield();
+	// Nothing to run on this CPU, so let the other CPUs into the kernel until a task becomes runnable
+	// Just to avoid enabling interrupts in the kernel...
+	cur_task = NULL;
+	while (nuser_tasks > 0 && !runq.root) {
+		big_spin_unlock(&kernel_lock);
+		asm volatile("pause");
+		big_spin_lock(&kernel_lock);
+		#ifdef BONUS_SLEEP_TIME
+		wakeup();
+		#endif
 	}
-	#endif
 
-	sched_halt();
+	if (nuser_tasks == 0) sched_halt();
+
+	return sched_yield();
 }
 
 /* For now jump into the kernel monitor. */
 void sched_halt()
 {
-	if (nuser_tasks == 0) {
-		cprintf("No runnable tasks!\n");
-		halt_kernel();
-	} else {
-		this_cpu->cpu_status = CPU_HALTED;
-		big_spin_unlock(&kernel_lock);
-		asm volatile("sti; hlt");
-	}
+	cprintf("No runnable tasks!\n");
+	halt_kernel();
 }
 
 void sched_enqueue(struct task *task) {

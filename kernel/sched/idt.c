@@ -251,8 +251,9 @@ void int_handler(struct int_frame *frame)
 	assert(!(read_rflags() & FLAGS_IF));
 	/* cprintf("Incoming INT frame at %p\n", frame); */
 
-	if ((frame->cs & 3) == 3 || this_cpu->cpu_status == CPU_HALTED) big_spin_lock(&kernel_lock);
 	if ((frame->cs & 3) == 3) {
+		big_spin_lock(&kernel_lock);
+
 		/* Interrupt from user mode. */
 		assert(cur_task);
 
