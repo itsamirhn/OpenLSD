@@ -127,9 +127,11 @@ void sched_sleep(uint64_t ns) {
 	task->task_status = TASK_SLEEPING;
 	task->task_wakeup_tsc = read_tsc() + ns * time_tsc_khz() / NSEC_PER_MSEC;
 	task->task_frame.rax = 0; // Sleep syscall return value after wakeup
+	task->task_karma += read_tsc() - task->task_start_tsc;
+	cur_task = NULL;
+	load_pml4(PADDR(kernel_pml4));
 	rb_node_init(&task->task_sched_rb);
 	rb_sleep_insert(&sleepq, task, NULL);
-	cur_task = NULL;
 	sched_yield();
 }
 

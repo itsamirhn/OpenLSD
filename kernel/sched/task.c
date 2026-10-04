@@ -487,6 +487,7 @@ void task_free(struct task *task)
  */
 void task_destroy(struct task *task)
 {
+	bool self = task == cur_task;
 	list_del(&task->task_node);
 	if (task->task_status == TASK_RUNNABLE) sched_dequeue(task);
 
@@ -510,12 +511,16 @@ void task_destroy(struct task *task)
 			task_free(task);
 		} else {
 			task->task_status = TASK_DYING;
+			if (self) {
+				cur_task = NULL;
+				load_pml4(PADDR(kernel_pml4));
+			}
 			list_add(&parent->task_zombies, &task->task_node);
 		}
 		fine_spin_unlock(&parent->task_lock);
 	} else task_free(task);
 
-	if (task == cur_task) {
+	if (self) {
 		cur_task = NULL;
 		sched_yield();
 	}

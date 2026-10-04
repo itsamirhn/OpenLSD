@@ -40,6 +40,7 @@ pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
 		self->task_rstatus = rstatus;
 		self->task_karma += read_tsc() - self->task_start_tsc;
 		cur_task = NULL;
+		load_pml4(PADDR(kernel_pml4));
 		fine_spin_unlock(&self->task_lock);
 		sched_yield();
 	}
