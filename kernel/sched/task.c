@@ -225,7 +225,6 @@ struct task *task_alloc(pid_t ppid)
 
 
 	rb_init(&task->task_rb);
-	list_init(&task->task_runq);
 	list_init(&task->task_mmap);
 	list_init(&task->task_children);
 	list_init(&task->task_child);

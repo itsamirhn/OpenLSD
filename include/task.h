@@ -65,9 +65,6 @@ struct task {
 	 * The node in the sleep queue (ordered by wakeup time) when it sleeps */
 	struct rb_node task_sched_rb;
 
-	/* The node used while the task is on a per-CPU run queue. */
-	struct list task_runq;
-
 	/* The exit status of the task in case it has died */
 	int task_exit_status;
 
