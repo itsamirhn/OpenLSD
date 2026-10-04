@@ -209,9 +209,7 @@ struct task *task_alloc(pid_t ppid)
 	task->task_status = TASK_RUNNABLE;
 	task->task_runs = 0;
 	task->task_karma = 0;
-	task->task_start_tsc = 0;
-	task->task_on_runq = 0;
-	task->task_on_global_runq = 0;
+	task->task_start_tsc = 0;;
 	
 #ifndef USE_BIG_KERNEL_LOCK
 	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
@@ -576,7 +574,6 @@ void task_run(struct task *task)
 	 *  e->task_frame to sensible values.
 	 */
 	if (cur_task != task) {	
-		if (cur_task && cur_task->task_status == TASK_RUNNING) sched_enqueue(cur_task);
 		cur_task = task;
 		cur_task->task_status = TASK_RUNNING;
 		cur_task->task_runs++;

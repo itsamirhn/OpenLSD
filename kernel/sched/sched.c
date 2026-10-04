@@ -10,6 +10,8 @@
 #include <kernel/monitor.h>
 #include <kernel/sched.h>
 
+#define SCHED_BALANCE_PICKS 10
+
 #ifdef USE_BIG_KERNEL_LOCK
 extern struct spinlock kernel_lock;
 #endif
@@ -27,8 +29,6 @@ struct spinlock runq_lock = {
 
 extern size_t nuser_tasks;
 
-static uint64_t min_karma;
-
 int rb_sleep_cmp(struct task *a, struct task *b) {
 	if (a->task_wakeup_tsc < b->task_wakeup_tsc) return -1;
 	if (a->task_wakeup_tsc > b->task_wakeup_tsc) return 1;
@@ -45,10 +45,30 @@ int rb_karma_cmp(struct task *a, struct task *b) {
 
 RB_DEFINE_INSERT_FUNC(struct task, rb_runq_insert, rb_karma_cmp, task_sched_rb)
 
+static void runq_insert(struct rb_tree *tree, struct task *task) {
+	struct task *first = rb_first(tree, struct task, task_sched_rb);
+	task->task_karma = MAX(task->task_karma, first ? first->task_karma : 0);
+	task->task_status = TASK_RUNNABLE;
+	rb_node_init(&task->task_sched_rb);
+	rb_runq_insert(tree, task, NULL);
+}
+
+static void sched_enqueue_local(struct task *task)
+{
+	runq_insert(&this_cpu->runq, task);
+}
+
 void sched_init(void)
 {
 	rb_init(&runq);
 	rb_init(&sleepq);
+	sched_init_mp();
+}
+
+void sched_init_mp(void)
+{
+	rb_init(&this_cpu->runq);
+	this_cpu->runq_picks = 0;
 }
 
 void wakeup(void) {
@@ -56,17 +76,38 @@ void wakeup(void) {
 		struct task *task = rb_first(&sleepq, struct task, task_sched_rb);
 		if (task->task_wakeup_tsc > read_tsc()) break;
 		rb_remove(&sleepq, &task->task_sched_rb);
-		sched_enqueue(task);
+		sched_enqueue_local(task);
 	}
 }
-void sched_init_mp(void)
-{
-	/* LAB 6: your code here. */
+
+static void sched_balance(void) {
+	struct rb_tree *local = &this_cpu->runq;
+	struct task *task;
+
+	if (!fine_spin_trylock(&runq_lock)) return;
+
+	// Move one min from global to local because having one job is enough
+	if (runq.root) {
+		task = rb_first(&runq, struct task, task_sched_rb);
+		rb_remove(&runq, &task->task_sched_rb);
+		runq_insert(local, task);
+	}
+
+	// Move all max from local to global because they can do more while I'm busy
+	while (local->size > runq.size + 1) {
+		task = rb_last(local, struct task, task_sched_rb);
+		rb_remove(local, &task->task_sched_rb);
+		runq_insert(&runq, task);
+	}
+
+	fine_spin_unlock(&runq_lock);
 }
 
 /* Runs the next runnable task. */
 void sched_yield(void)
 {
+	struct cpuinfo *cpu = this_cpu;
+
 	#ifdef BONUS_SLEEP_TIME
 	wakeup();
 	#endif
@@ -74,32 +115,32 @@ void sched_yield(void)
 	if (cur_task && cur_task->task_status == TASK_RUNNING)
 		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
 
-	if (runq.root) {
-		struct task *task = rb_first(&runq, struct task, task_sched_rb);
-		rb_remove(&runq, &task->task_sched_rb);
-		min_karma = MAX(min_karma, task->task_karma);
+	if (++cpu->runq_picks % SCHED_BALANCE_PICKS == 0 || !cpu->runq.root)
+		sched_balance();
+
+	if (cpu->runq.root) {
+		struct task *task = rb_first(&cpu->runq, struct task, task_sched_rb);
+		rb_remove(&cpu->runq, &task->task_sched_rb);
+		if (cur_task && cur_task->task_status == TASK_RUNNING)
+			sched_enqueue_local(cur_task);
 		task->task_start_tsc = read_tsc();
 		return task_run(task);
 	}
-	
+
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
 		cur_task->task_start_tsc = read_tsc();
 		return task_run(cur_task);
 	}
 
-	// Nothing to run on this CPU, so let the other CPUs into the kernel until a task becomes runnable
-	// Just to avoid enabling interrupts in the kernel...
 	cur_task = NULL;
-	while (nuser_tasks > 0 && !runq.root) {
+	while (!cpu->runq.root && (nuser_tasks > 0 || cpu != boot_cpu)) {
 		big_spin_unlock(&kernel_lock);
-		asm volatile("pause");
+		asm volatile("pause" ::: "memory");
 		big_spin_lock(&kernel_lock);
-		#ifdef BONUS_SLEEP_TIME
-		wakeup();
-		#endif
+		if (runq.size) sched_balance();
 	}
 
-	if (nuser_tasks == 0) sched_halt();
+	if (!cpu->runq.root) sched_halt();
 
 	return sched_yield();
 }
@@ -112,14 +153,21 @@ void sched_halt()
 }
 
 void sched_enqueue(struct task *task) {
-	task->task_karma = MAX(task->task_karma, min_karma);
-	task->task_status = TASK_RUNNABLE;
-	rb_node_init(&task->task_sched_rb);
-	rb_runq_insert(&runq, task, NULL);
+	fine_spin_lock(&runq_lock);
+	runq_insert(&runq, task);
+	fine_spin_unlock(&runq_lock);
 }
 
 void sched_dequeue(struct task *task) {
-	rb_remove(&runq, &task->task_sched_rb);
+	struct rb_node *top = &task->task_sched_rb;
+
+	fine_spin_lock(&runq_lock);
+	while (top->parent) top = top->parent;
+	if (top == runq.root)
+		rb_remove(&runq, &task->task_sched_rb);
+	else if (top == this_cpu->runq.root)
+		rb_remove(&this_cpu->runq, &task->task_sched_rb);
+	fine_spin_unlock(&runq_lock);
 }
 
 void sched_sleep(uint64_t ns) {

@@ -52,8 +52,8 @@ struct cpuinfo {
 	uint64_t spinlock_rank;
 
 	/* Per-CPU run queue */
-	struct list runq, nextq;
-	size_t runq_len;
+	struct rb_tree runq;
+	size_t runq_picks;
 };
 
 #define NCPUS 64

@@ -312,7 +312,8 @@ void rb_fix_tree_insert(struct rb_tree* root, struct rb_node* newNode);
  */
 void rb_remove(struct rb_tree* root, struct rb_node* nodeToRemove);
 
-struct rb_node *rb_tree_minimum(struct rb_tree *root, struct rb_node *x);
+struct rb_node *rb_index_element(struct rb_tree *root, int k);
 
 /* Returns the entry with the smallest key in the tree, or NULL if the tree is empty. */
-#define rb_first(tree, type, rb_node_member) ((tree)->root ? container_of(rb_tree_minimum((tree), (tree)->root), type, rb_node_member) : NULL)
+#define rb_first(tree, type, rb_node_member) ((tree)->root ? container_of(rb_index_element((tree), 0), type, rb_node_member) : NULL)
+#define rb_last(tree, type, rb_node_member) ((tree)->root ? container_of(rb_index_element((tree), (tree)->size - 1), type, rb_node_member) : NULL)

@@ -68,12 +68,6 @@ struct task {
 	/* The node used while the task is on a per-CPU run queue. */
 	struct list task_runq;
 
-	/* Non-zero while task_runq is linked into a per-CPU queue. */
-	unsigned task_on_runq;
-
-	/* Non-zero while task_sched_rb is linked into the global run queue. */
-	unsigned task_on_global_runq;
-
 	/* The exit status of the task in case it has died */
 	int task_exit_status;
 
