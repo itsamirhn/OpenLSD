@@ -67,6 +67,8 @@ static void sys_cputs(const char *s, size_t len)
 		stac(); // seperate buffer seems a bit too much right now and it should be safe-ish
 	#endif
 
+	sys_madvise((void *)s, len, MADV_WILLNEED);
+
 	/* Print the string supplied by the user. */
 	cprintf("%.*s", len, s);
 
