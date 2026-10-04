@@ -452,10 +452,12 @@ void task_free(struct task *task)
 	/* Unmap the task from the PID map. */
 	tasks[task->task_pid] = NULL;
 
+	fine_spin_lock(&task->task_lock);
 	while (!list_is_empty(&task->task_zombies)) 
 		task_free(container_of(list_pop(&task->task_zombies), struct task, task_node));
 
 	while (!list_is_empty(&task->task_children)) list_pop(&task->task_children);
+	fine_spin_unlock(&task->task_lock);
 
 	list_del(&task->task_child);
 	list_del(&task->task_node);
@@ -493,9 +495,10 @@ void task_destroy(struct task *task)
 	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
 	#endif
 
-	if (!list_is_empty(&task->task_child)) {
-		struct task *parent = pid2task(task->task_ppid, 0);
-		fine_spin_lock(&parent->task_lock);
+	struct task *parent = task->task_ppid ? pid2task(task->task_ppid, 0) : NULL;
+	if (parent) fine_spin_lock(&parent->task_lock);
+
+	if (parent && !list_is_empty(&task->task_child)) {
 		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
 			if (parent->task_rstatus) {
 				// rstatus lives in the parent's address space
@@ -515,8 +518,9 @@ void task_destroy(struct task *task)
 			}
 			list_add(&parent->task_zombies, &task->task_node);
 		}
-		fine_spin_unlock(&parent->task_lock);
 	} else task_free(task);
+
+	if (parent) fine_spin_unlock(&parent->task_lock);
 
 	if (self) {
 		cur_task = NULL;
