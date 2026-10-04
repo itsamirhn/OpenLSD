@@ -16,31 +16,34 @@ pid_t sys_wait(int *rstatus)
 pid_t sys_waitpid(pid_t pid, int *rstatus, int opts)
 {
 	struct list	*node;
+	struct task *self = cur_task;
 
-	if (rstatus) assert_user_mem(cur_task, rstatus, sizeof *rstatus, PROT_WRITE);
+	if (rstatus) assert_user_mem(self, rstatus, sizeof *rstatus, PROT_WRITE);
 
-	fine_spin_lock(&cur_task->task_lock);
-	list_foreach(&cur_task->task_zombies, node) {
+	fine_spin_lock(&self->task_lock);
+	list_foreach(&self->task_zombies, node) {
 		struct task *task = container_of(node, struct task, task_node);
 		if (pid > 0 && task->task_pid != pid) continue;
 		if (rstatus) *rstatus = task->task_exit_status;
 		pid = task->task_pid;
-		cprintf("[PID %5u] Reaping task with PID %u\n", cur_task->task_pid, task->task_pid);
+		cprintf("[PID %5u] Reaping task with PID %u\n", self->task_pid, task->task_pid);
 		task_free(task);
-		fine_spin_unlock(&cur_task->task_lock);
+		fine_spin_unlock(&self->task_lock);
 		return pid;
 	}
 
-	list_foreach(&cur_task->task_children, node) {
+	list_foreach(&self->task_children, node) {
 		struct task *task = container_of(node, struct task, task_child);
 		if (pid > 0 && task->task_pid != pid) continue;
-		cur_task->task_wait = pid > 0 ? task : NULL;
-		cur_task->task_status = TASK_NOT_RUNNABLE;
-		cur_task->task_rstatus = rstatus;
-		fine_spin_unlock(&cur_task->task_lock);
+		self->task_wait = pid > 0 ? task : NULL;
+		self->task_status = TASK_NOT_RUNNABLE;
+		self->task_rstatus = rstatus;
+		self->task_karma += read_tsc() - self->task_start_tsc;
+		cur_task = NULL;
+		fine_spin_unlock(&self->task_lock);
 		sched_yield();
 	}
 
-	fine_spin_unlock(&cur_task->task_lock);
+	fine_spin_unlock(&self->task_lock);
 	return -ECHILD;
 }
