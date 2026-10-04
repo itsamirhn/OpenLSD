@@ -210,6 +210,8 @@ struct task *task_alloc(pid_t ppid)
 	task->task_runs = 0;
 	task->task_karma = 0;
 	task->task_start_tsc = 0;
+	task->task_on_runq = 0;
+	task->task_on_global_runq = 0;
 	
 #ifndef USE_BIG_KERNEL_LOCK
 	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
@@ -225,6 +227,7 @@ struct task *task_alloc(pid_t ppid)
 
 
 	rb_init(&task->task_rb);
+	list_init(&task->task_runq);
 	list_init(&task->task_mmap);
 	list_init(&task->task_children);
 	list_init(&task->task_child);
