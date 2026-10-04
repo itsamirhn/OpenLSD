@@ -18,6 +18,8 @@ struct spinlock console_lock = {
 };
 #endif
 
+extern char *panicstr;
+
 static void putch(int ch, int *cnt)
 {
 	cputchar(ch);
@@ -27,9 +29,11 @@ static void putch(int ch, int *cnt)
 int vcprintf(const char *fmt, va_list ap)
 {
 	int cnt = 0;
-	fine_spin_lock(&console_lock);
+
+	bool lock = panicstr == NULL;
+	if (lock) fine_spin_lock(&console_lock);
 	vprintfmt((void*)putch, &cnt, fmt, ap);
-	fine_spin_unlock(&console_lock);
+	if (lock) fine_spin_unlock(&console_lock);
 	return cnt;
 }
 
