@@ -5,6 +5,10 @@
 #include <kernel/sched.h>
 #include <kernel/sched/task.h>
 
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
+
 extern size_t nuser_tasks;
 
 static void zero_page_thread(void *arg)
@@ -13,9 +17,10 @@ static void zero_page_thread(void *arg)
 
 	(void)arg;
 	for (;;) {
+		asm volatile("cli" ::: "memory");
+		big_spin_lock(&kernel_lock);
 		if (nuser_tasks == 0)
 			task_destroy(cur_task);
-		asm volatile("cli" ::: "memory");
 		while ((page = page_zero_pending()) != NULL)
 			page_zero_complete(page);
 		sched_yield();

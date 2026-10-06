@@ -6,7 +6,6 @@
 #define RANK_BUDDY    (1ULL << 1)
 #define RANK_CONSOLE  (1ULL << 32)
 #define RANK_SCHED    (1ULL << 2)
-#define RANK_ZERO      (1ULL << 3)
 
 struct cpuinfo;
 

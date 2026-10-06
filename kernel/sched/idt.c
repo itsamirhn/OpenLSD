@@ -265,8 +265,8 @@ void int_handler(struct int_frame *frame)
 	}else{
 		//same but kernel task
 		big_spin_lock(&kernel_lock);
-		cur_task->task_lock = *frame;
-		frame = &cur_task->task_lock;
+		cur_task->task_frame = *frame;
+		frame = &cur_task->task_frame;
 	}
 
 	/* Dispatch based on the type of interrupt that occurred. */
