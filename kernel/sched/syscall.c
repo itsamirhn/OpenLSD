@@ -207,6 +207,14 @@ static int sys_getcpuid(void)
 	return lapic_cpunum();
 }
 
+static int sys_sched_setaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask) {
+	return -ENOSYS;
+}
+
+static int sys_sched_getaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask) {
+	return -ENOSYS;
+}
+
 /* Dispatches to the correct kernel function, passing the arguments. */
 int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
         uint64_t a4, uint64_t a5, uint64_t a6)
@@ -258,6 +266,10 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 			return sys_exec((char *)a1);
 		case SYS_getcpuid:
 			return sys_getcpuid();
+		case SYS_sched_setaffinity:
+			return sys_sched_setaffinity((pid_t)a1, (unsigned)a2, (cpu_set_t *)a3);
+		case SYS_sched_getaffinity:
+			return sys_sched_getaffinity((pid_t)a1, (unsigned)a2, (cpu_set_t *)a3);
 		default:
 			return -ENOSYS;
 	}

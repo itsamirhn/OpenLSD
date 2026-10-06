@@ -11,6 +11,9 @@
 
 typedef int32_t pid_t;
 
+// Bit i set means the task may run on CPU i
+typedef uint64_t cpu_set_t;
+
 /* Values of task_status in struct task. */
 enum {
 	TASK_DYING = 0,
@@ -70,6 +73,9 @@ struct task {
 
 	/* The CPU that the task is running on. */
 	int task_cpunum;
+
+	/* The CPUs the task is allowed to run on. */
+	uint64_t task_affinity;
 
 	/* The virtual address space. */
 	struct page_table *task_pml4;

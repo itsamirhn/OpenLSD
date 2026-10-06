@@ -21,5 +21,7 @@ enum {
 	SYS_exec,
 	SYS_clock_nanosleep,
 	SYS_getcpuid,
+	SYS_sched_setaffinity,
+	SYS_sched_getaffinity,
 	NSYSCALLS,
 };
