@@ -1,0 +1,11 @@
+name: Core Hotplugging - Automatic (4 cores)
+description: Idle cores sleep, and power on again when there are more tasks
+bonus: CORE_HOTPLUGGING
+qemu: -smp 4
+timeout: 60
+
+regexlines:
+  - "SMP: CPU [123] powered off"
+  - "SMP: CPU [123] powered on"
+  - ".PID     1. Children ran on more than one core"
+  - ".PID     1. Exiting gracefully"
