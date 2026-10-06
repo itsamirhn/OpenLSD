@@ -208,11 +208,39 @@ static int sys_getcpuid(void)
 }
 
 static int sys_sched_setaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask) {
-	return -ENOSYS;
+	struct task *task = pid2task(pid, 1);
+	cpu_set_t set;
+
+	if (!task) return -EINVAL;
+	if (cpusetsize < sizeof set) return -EINVAL;
+
+	assert_user_mem(cur_task, mask, sizeof set, PROT_READ);
+	protected_copy(&set, mask, sizeof set);
+
+	set &= CPUS_MASK;
+	if (!set) return -EINVAL;
+
+	task->task_affinity = set;
+
+	// Move off this CPU right away if we are no longer allowed on it
+	if (cur_task == task && !(set & (1ULL << lapic_cpunum()))) {
+		task->task_frame.rax = 0;
+		sched_yield();
+	}
+
+	return 0;
 }
 
 static int sys_sched_getaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask) {
-	return -ENOSYS;
+	struct task *task = pid2task(pid, 1);
+
+	if (!task) return -EINVAL;
+	if (cpusetsize < sizeof *mask) return -EINVAL;
+
+	assert_user_mem(cur_task, mask, sizeof *mask, PROT_WRITE);
+	protected_copy(mask, &task->task_affinity, sizeof *mask);
+
+	return 0;
 }
 
 /* Dispatches to the correct kernel function, passing the arguments. */

@@ -53,6 +53,8 @@ static void runq_insert(struct rb_tree *tree, struct task *task) {
 	rb_runq_insert(tree, task, NULL);
 }
 
+#define runnable_by_me(task) ((task)->task_affinity & (1ULL << lapic_cpunum()))
+
 static void sched_enqueue_local(struct task *task)
 {
 	runq_insert(&this_cpu->runq, task);
@@ -87,10 +89,12 @@ static void sched_balance(void) {
 	if (!fine_spin_trylock(&runq_lock)) return;
 
 	// Move one min from global to local because having one job is enough
-	if (runq.root) {
-		task = rb_first(&runq, struct task, task_sched_rb);
+	for (int i = 0; i < runq.size; i++) {
+		task = container_of(rb_index_element(&runq, i), struct task, task_sched_rb);
+		if (!runnable_by_me(task)) continue;
 		rb_remove(&runq, &task->task_sched_rb);
 		runq_insert(local, task);
+		break;
 	}
 
 	// Move all max from local to global because they can do more while I'm busy
@@ -112,15 +116,25 @@ void sched_yield(void)
 	wakeup();
 	#endif
 
-	if (cur_task && cur_task->task_status == TASK_RUNNING)
+	if (cur_task && cur_task->task_status == TASK_RUNNING) {
 		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
+		if (!runnable_by_me(cur_task)) {
+		sched_enqueue(cur_task);
+		cur_task = NULL;
+		load_pml4(PADDR(kernel_pml4));
+		}
+	}
 
 	if (++cpu->runq_picks % SCHED_BALANCE_PICKS == 0 || !cpu->runq.root)
 		sched_balance();
 
-	if (cpu->runq.root) {
+	while (cpu->runq.root) {
 		struct task *task = rb_first(&cpu->runq, struct task, task_sched_rb);
 		rb_remove(&cpu->runq, &task->task_sched_rb);
+		if (!runnable_by_me(task)) {
+			sched_enqueue(task);
+			continue;
+		}
 		if (cur_task && cur_task->task_status == TASK_RUNNING)
 			sched_enqueue_local(cur_task);
 		task->task_start_tsc = read_tsc();

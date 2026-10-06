@@ -64,4 +64,6 @@ extern struct cpuinfo *boot_cpu;
 #define this_cpu (cpus + lapic_cpunum())
 extern size_t ncpus;
 
+#define CPUS_MASK (1ULL << ncpus) - 1
+
 #endif /* !defined(__ASSEMBLER__) */

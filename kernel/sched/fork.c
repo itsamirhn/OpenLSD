@@ -45,6 +45,8 @@ struct task *task_clone(struct task *task)
 	if (!child) return NULL;
 
 	child->task_type = task->task_type;                        /* child inherits parent's type */
+	child->task_affinity = task->task_affinity;
+
 	if (child->task_type == TASK_TYPE_USER) atomic_inc(&nuser_tasks);
 
 	memcpy(&child->task_frame, &task->task_frame, sizeof child->task_frame);

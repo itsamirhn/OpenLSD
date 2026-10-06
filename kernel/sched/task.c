@@ -210,6 +210,7 @@ struct task *task_alloc(pid_t ppid)
 	task->task_runs = 0;
 	task->task_karma = 0;
 	task->task_start_tsc = 0;;
+	task->task_affinity = CPUS_MASK;
 	
 #ifndef USE_BIG_KERNEL_LOCK
 	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
