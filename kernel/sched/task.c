@@ -23,7 +23,7 @@ pid_t pid_max = 1 << 16;
 struct task **tasks = (struct task **)PIDMAP_BASE;
 size_t nuser_tasks = 0;
 
-static void task_kernel_entry(void (*entry)(void *), void *arg)
+static void kthread_entry(void (*entry)(void *), void *arg)
 {
 	entry(arg);
 	task_destroy(cur_task);
@@ -174,7 +174,7 @@ static int task_setup_vdso(struct task *task) {
 /* Allocates and initializes a new task.
  * On success, the new task is returned.
  */
-struct task *task_alloc(pid_t ppid)
+static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 {
 	struct task *task;
 	pid_t pid;
@@ -195,7 +195,8 @@ struct task *task_alloc(pid_t ppid)
 	/* Find a free PID for the task in the PID mapping and associate the
 	 * task with that PID.
 	 */
-	for (pid = 1; pid < pid_max; ++pid) {
+	pid_t step = type == TASK_TYPE_KERNEL ? -1 : 1;
+	for (pid = step > 0 ? 1 : pid_max - 1; pid > 0 && pid < pid_max; pid += step) {
 		if (!tasks[pid]) {
 			tasks[pid] = task;
 			task->task_pid = pid;
@@ -203,7 +204,7 @@ struct task *task_alloc(pid_t ppid)
 		}
 	}
 	/* We are out of PIDs. */
-	if (pid == pid_max) {
+	if (pid <= 0 || pid >= pid_max) {
 		page_decref(pa2page(PADDR(task->task_pml4)));
 		kfree(task);
 		return NULL;
@@ -211,7 +212,7 @@ struct task *task_alloc(pid_t ppid)
 
 	/* Set up the task. */
 	task->task_ppid = ppid;
-	task->task_type = TASK_TYPE_USER;
+	task->task_type = type;
 	task->task_status = TASK_RUNNABLE;
 	task->task_runs = 0;
 	task->task_karma = 0;
@@ -224,10 +225,16 @@ struct task *task_alloc(pid_t ppid)
 
 	memset(&task->task_frame, 0, sizeof task->task_frame);
 
-	task->task_frame.ds = GDT_UDATA | 3;
-	task->task_frame.ss = GDT_UDATA | 3;
-	task->task_frame.rsp = USTACK_TOP;
-	task->task_frame.cs = GDT_UCODE | 3;
+	if (type == TASK_TYPE_KERNEL) {
+		task->task_frame.ds = GDT_KDATA;
+		task->task_frame.ss = GDT_KDATA;
+		task->task_frame.cs = GDT_KCODE;
+	} else {
+		task->task_frame.ds = GDT_UDATA | 3;
+		task->task_frame.ss = GDT_UDATA | 3;
+		task->task_frame.rsp = USTACK_TOP;
+		task->task_frame.cs = GDT_UCODE | 3;
+	}
 	task->task_frame.rflags = FLAGS_IF; // enable interrupts
 
 
@@ -248,6 +255,8 @@ struct task *task_alloc(pid_t ppid)
 
 	return task;
 }
+
+struct task *task_alloc(pid_t ppid) { return task_alloc_type(ppid, TASK_TYPE_USER); }
 
 #ifdef BONUS_ASLR
 
@@ -387,9 +396,9 @@ void task_create(uint8_t *binary, enum task_type type)
 	sched_enqueue(task);
 }
 
-void task_create_kernel(void (*entry)(void *), void *arg)
+void kthread_create(void (*entry)(void *), void *arg)
 {
-	struct task *task = task_alloc(40);
+	struct task *task = task_alloc_type(0, TASK_TYPE_KERNEL);
 	struct page_info *stack;
 	uintptr_t stack_top = KSTACK_TOP - KSTACK_SIZE * 2;
 	void *stack_base = (void *)(stack_top - PAGE_SIZE);
@@ -402,11 +411,7 @@ void task_create_kernel(void (*entry)(void *), void *arg)
 	assert(stack != NULL);
 	assert(page_insert(kernel_pml4, stack, stack_base,
 		PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
-	task->task_type = TASK_TYPE_KERNEL;
-	task->task_frame.ds = GDT_KDATA;
-	task->task_frame.ss = GDT_KDATA;
-	task->task_frame.cs = GDT_KCODE;
-	task->task_frame.rip = (uintptr_t)task_kernel_entry;
+	task->task_frame.rip = (uintptr_t)kthread_entry;
 	task->task_frame.rsp = stack_top - sizeof(uintptr_t);
 	task->task_frame.rdi = (uintptr_t)entry;
 	task->task_frame.rsi = (uintptr_t)arg;

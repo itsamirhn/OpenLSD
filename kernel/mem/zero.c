@@ -29,5 +29,5 @@ static void zero_page_thread(void *arg)
 
 void zero_page_thread_init(void)
 {
-	task_create_kernel(zero_page_thread, NULL);
+	kthread_create(zero_page_thread, NULL);
 }
