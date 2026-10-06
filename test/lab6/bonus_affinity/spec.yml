@@ -1,0 +1,7 @@
+name: Affinity - Pin Task to a Core (4 cores)
+description: Pin a task to one core and check that it only runs there
+qemu: -smp 4
+
+regexlines:
+  - ".PID     1. Pinned to CPU 2"
+  - ".PID     1. Exiting gracefully"
