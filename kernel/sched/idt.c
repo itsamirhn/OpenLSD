@@ -183,7 +183,7 @@ void idt_init(void)
 	set_idt_entry(&entries[IRQ_TIMER], isr32,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[INT_PANIC], isr127,
-		IDT_TRAP_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
+		IDT_INT_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	set_idt_entry(&entries[INT_SYSCALL], isr128,
 		IDT_INT_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	load_idt(&idtr);
