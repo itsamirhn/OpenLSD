@@ -85,7 +85,7 @@ void wakeup(void) {
 
 static void sched_balance(void) {
 	struct rb_tree *local = &this_cpu->runq;
-	struct task *task;
+	struct task *task, *pulled = NULL;
 
 	if (!fine_spin_trylock(&runq_lock)) return;
 
@@ -95,12 +95,16 @@ static void sched_balance(void) {
 		if (!runnable_by_me(task)) continue;
 		rb_remove(&runq, &task->task_sched_rb);
 		runq_insert(local, task);
+		pulled = task;
 		break;
 	}
 
 	// Move all max from local to global because they can do more while I'm busy
 	while (local->size > runq.size + 1) {
 		task = rb_last(local, struct task, task_sched_rb);
+		// Never push back the task we just pulled, or it can starve on one CPU
+		if (task == pulled)
+			task = container_of(rb_index_element(local, local->size - 2), struct task, task_sched_rb);
 		rb_remove(local, &task->task_sched_rb);
 		runq_insert(&runq, task);
 	}
