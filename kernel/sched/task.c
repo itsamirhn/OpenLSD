@@ -411,7 +411,6 @@ void kthread_create(void (*entry)(void *), void *arg)
 	task->task_frame.rsp = stack_top - sizeof(uintptr_t);
 	task->task_frame.rdi = (uintptr_t)entry;
 	task->task_frame.rsi = (uintptr_t)arg;
-	task->task_karma = SIZE_MAX / 2;
 
 	sched_enqueue(task);
 }
