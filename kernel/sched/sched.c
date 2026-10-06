@@ -9,6 +9,7 @@
 #include <kernel/mem.h>
 #include <kernel/monitor.h>
 #include <kernel/sched.h>
+#include <kernel/sched/hotplug.h>
 
 #define SCHED_BALANCE_PICKS 10
 
@@ -120,6 +121,30 @@ static void sched_balance(void) {
 	fine_spin_unlock(&runq_lock);
 }
 
+#ifdef BONUS_CORE_HOTPLUGGING
+ // CPU should power off (idle or syscall) and now needs to move its tasks to the global run queue and sleep
+ // does not return
+static void sched_power_off(void){
+	struct cpuinfo *cpu = this_cpu;
+	struct task *task;
+
+	if (cur_task && cur_task->task_status == TASK_RUNNING) {
+		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
+		sched_enqueue(cur_task);
+	}
+	cur_task = NULL;
+	load_pml4(PADDR(kernel_pml4));
+
+	while (cpu->runq.root) {
+		task = rb_first(&cpu->runq, struct task, task_sched_rb);
+		rb_remove(&cpu->runq, &task->task_sched_rb);
+		sched_enqueue(task);
+	}
+
+	core_park();
+}
+#endif
+
 /* Runs the next runnable task. */
 void sched_yield(void)
 {
@@ -127,6 +152,10 @@ void sched_yield(void)
 
 	#ifdef BONUS_SLEEP_TIME
 	wakeup();
+	#endif
+
+	#ifdef BONUS_CORE_HOTPLUGGING
+	if (cpu->cpu_off) sched_power_off();
 	#endif
 
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
