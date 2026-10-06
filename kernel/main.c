@@ -115,6 +115,8 @@ void kmain(struct boot_info *boot_info)
 	}
 
 	task_create(binary, TASK_TYPE_USER);
+	page_zero_enable();
+	zero_page_thread_init();
 
 	sched_yield();
 }

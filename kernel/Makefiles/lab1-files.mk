@@ -9,6 +9,7 @@ KERNEL_SRCFILES += \
 	kernel/printf.c \
 	kernel/mem/boot.c \
 	kernel/mem/buddy.c \
+	kernel/mem/zero.c \
 	kernel/mem/init.c \
 	kernel/test/probe.c \
 	kernel/test/stubs.S \

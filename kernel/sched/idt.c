@@ -284,10 +284,11 @@ void page_fault_handler(struct int_frame *frame)
 
 	/* Handle kernel-mode page faults. */
 	if ((frame->cs & 3) == 0) {
-		cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
-		print_int_frame(frame);
-		if (task_page_fault_handler(cur_task, fault_va, frame->err_code) < 0) {
-			panic("Kernel page fault handler failed");
+		ret =  task_page_fault_handler(cur_task, fault_va, frame->err_code);
+		if (ret < 0){
+			cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
+			print_int_frame(frame);
+			panic("page fault in kernel task");
 		}
 		return;
 	}

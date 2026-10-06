@@ -17,6 +17,14 @@ struct page_info *pages;
  * specific buddy order. Buddy orders go from 0 to BUDDY_MAX_ORDER - 1
  */
 struct list buddy_free_list[BUDDY_MAX_ORDER];
+static struct list zero_pending;
+static bool zero_pending_enabled;
+static struct spinlock zero_lock = {
+	.rank = RANK_ZERO,
+#ifdef DEBUG_SPINLOCK
+	.name = "zero_lock",
+#endif
+};
 
 #ifndef USE_BIG_KERNEL_LOCK
 /* Lock for the buddy allocator. */
@@ -27,6 +35,16 @@ struct spinlock buddy_lock = {
 #endif
 };
 #endif
+
+static struct page_info *buddy_merge(struct page_info *page);
+
+static void page_free_immediate(struct page_info *pp)
+{
+	fine_spin_lock(&buddy_lock);
+	pp->pp_free = 1;
+	buddy_merge(pp);
+	fine_spin_unlock(&buddy_lock);
+}
 
 /* Counts the number of free pages for the given order.
  */
@@ -285,8 +303,6 @@ void page_free(struct page_info *pp)
 		}
 	#endif
 
-	fine_spin_lock(&buddy_lock);
-
 	#ifdef BONUS_INVALID_FREE
 		if (pp->pp_order >= BUDDY_MAX_ORDER) {
 			panic("Invalid free detected; %p is not a block header", pp);
@@ -300,11 +316,41 @@ void page_free(struct page_info *pp)
 	#endif
 
 	assert(pp->pp_ref == 0);
-	pp->pp_free = 1;
+	if (!zero_pending_enabled || pp->pp_order != BUDDY_4K_PAGE) {
+		page_free_immediate(pp);
+		return;
+	}
 
-	buddy_merge(pp);
+	fine_spin_lock(&zero_lock);
+	pp->pp_zero = 1;
+	list_add_tail(&zero_pending, &pp->pp_node);
+	fine_spin_unlock(&zero_lock);
+}
 
-	fine_spin_unlock(&buddy_lock);
+struct page_info *page_zero_pending(void)
+{
+	struct page_info *page = NULL;
+
+	fine_spin_lock(&zero_lock);
+	if (!list_is_empty(&zero_pending)) {
+		page = container_of(list_pop(&zero_pending), struct page_info, pp_node);
+		page->pp_zero = 0;
+	}
+	fine_spin_unlock(&zero_lock);
+	return page;
+}
+
+void page_zero_complete(struct page_info *pp)
+{
+	memset(page2kva(pp), 0, PAGE_SIZE);
+	page_free_immediate(pp);
+}
+
+void page_zero_enable(void)
+{
+	spin_init(&zero_lock, "zero_lock", RANK_CONSOLE);
+	list_init(&zero_pending);
+	zero_pending_enabled = true;
 }
 
 /*

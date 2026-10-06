@@ -23,6 +23,12 @@ pid_t pid_max = 1 << 16;
 struct task **tasks = (struct task **)PIDMAP_BASE;
 size_t nuser_tasks = 0;
 
+static void task_kernel_entry(void (*entry)(void *), void *arg)
+{
+	entry(arg);
+	task_destroy(cur_task);
+}
+
 /* Looks up the respective task for a given PID.
  * If check_perm is non-zero, this function checks if the PID maps to the
  * current task or if the current task is the parent of the task that the PID
@@ -378,6 +384,34 @@ void task_create(uint8_t *binary, enum task_type type)
 	
 	if (type == TASK_TYPE_USER) atomic_inc(&nuser_tasks);
 	
+	sched_enqueue(task);
+}
+
+void task_create_kernel(void (*entry)(void *), void *arg)
+{
+	struct task *task = task_alloc(0);
+	struct page_info *stack;
+	uintptr_t stack_top = KSTACK_TOP - KSTACK_SIZE * 2;
+	void *stack_base = (void *)(stack_top - PAGE_SIZE);
+
+	assert(entry != NULL);
+	assert(task != NULL);
+
+	stack = page_alloc(ALLOC_ZERO);
+
+	assert(stack != NULL);
+	assert(page_insert(kernel_pml4, stack, stack_base,
+		PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
+	task->task_type = TASK_TYPE_KERNEL;
+	task->task_frame.ds = GDT_KDATA;
+	task->task_frame.ss = GDT_KDATA;
+	task->task_frame.cs = GDT_KCODE;
+	task->task_frame.rip = (uintptr_t)task_kernel_entry;
+	task->task_frame.rsp = stack_top - sizeof(uintptr_t);
+	task->task_frame.rdi = (uintptr_t)entry;
+	task->task_frame.rsi = (uintptr_t)arg;
+	task->task_karma = SIZE_MAX / 2;
+
 	sched_enqueue(task);
 }
 
