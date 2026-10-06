@@ -267,6 +267,10 @@ void int_handler(struct int_frame *frame)
 		big_spin_lock(&kernel_lock);
 		cur_task->task_frame = *frame;
 		frame = &cur_task->task_frame;
+	} else {
+		// interrupted the kernel, like anonymous page fault when handling a syscall
+		int_dispatch(frame);
+		iret64(frame);
 	}
 
 	/* Dispatch based on the type of interrupt that occurred. */

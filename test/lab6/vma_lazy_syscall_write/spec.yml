@@ -1,0 +1,6 @@
+name: VMA - Lazy Loading Syscall Write
+description: Tests that a syscall writing to an unmapped user page resumes after the kernel page fault
+
+regexlines:
+  - '.PID     1. Exiting gracefully'
+  - '.PID     1. Freed task with PID 1'
