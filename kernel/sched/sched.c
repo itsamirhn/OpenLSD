@@ -54,7 +54,11 @@ static void runq_insert(struct rb_tree *tree, struct task *task) {
 	rb_runq_insert(tree, task, NULL);
 }
 
+#ifdef BONUS_CORE_HOTPLUGGING
+#define runnable_by_me(task) (core_task_affinity(task) & (1ULL << lapic_cpunum()))
+#else
 #define runnable_by_me(task) ((task)->task_affinity & (1ULL << lapic_cpunum()))
+#endif
 
 static void sched_enqueue_local(struct task *task)
 {
@@ -109,6 +113,10 @@ static void sched_balance(void) {
 		runq_insert(&runq, task);
 	}
 
+#ifdef BONUS_CORE_HOTPLUGGING
+	core_auto_wake();
+#endif
+
 	fine_spin_unlock(&runq_lock);
 }
 
@@ -152,12 +160,22 @@ void sched_yield(void)
 	}
 
 	cur_task = NULL;
+#ifdef BONUS_CORE_HOTPLUGGING
+	uint64_t idle_start = read_tsc();
+	cpu->cpu_idle = true;
+#endif
 	while (!cpu->runq.root && (nuser_tasks > 0 || cpu != boot_cpu)) {
 		big_spin_unlock(&kernel_lock);
 		asm volatile("pause" ::: "memory");
 		big_spin_lock(&kernel_lock);
 		if (runq.size) sched_balance();
+	#ifdef BONUS_CORE_HOTPLUGGING
+		if (core_should_power_off(&idle_start)) sched_power_off();
+	#endif
 	}
+#ifdef BONUS_CORE_HOTPLUGGING
+	cpu->cpu_idle = false;
+#endif
 
 	if (!cpu->runq.root) sched_halt();
 
@@ -174,6 +192,9 @@ void sched_halt()
 void sched_enqueue(struct task *task) {
 	fine_spin_lock(&runq_lock);
 	runq_insert(&runq, task);
+#ifdef BONUS_CORE_HOTPLUGGING
+	core_auto_wake();
+#endif
 	fine_spin_unlock(&runq_lock);
 }
 
