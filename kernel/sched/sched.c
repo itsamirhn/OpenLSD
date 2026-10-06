@@ -21,6 +21,7 @@ struct rb_tree sleepq;
 
 #ifndef USE_BIG_KERNEL_LOCK
 struct spinlock runq_lock = {
+	.rank = RANK_SCHED,
 #ifdef DEBUG_SPINLOCK
 	.name = "runq_lock",
 #endif
