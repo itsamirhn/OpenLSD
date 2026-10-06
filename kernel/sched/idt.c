@@ -262,8 +262,8 @@ void int_handler(struct int_frame *frame)
 
 		/* Avoid using the frame on the stack. */
 		frame = &cur_task->task_frame;
-	}else{
-		//same but kernel task
+	} else if (cur_task && cur_task->task_type == TASK_TYPE_KERNEL) {
+		// interrupted a kernel thread, save the frame in the task so it can resume
 		big_spin_lock(&kernel_lock);
 		cur_task->task_frame = *frame;
 		frame = &cur_task->task_frame;
