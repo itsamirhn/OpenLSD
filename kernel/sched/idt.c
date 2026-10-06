@@ -40,6 +40,7 @@ DECL_ISR(18);
 DECL_ISR(19);
 DECL_ISR(30);
 DECL_ISR(32);
+DECL_ISR(240);
 DECL_ISR(127);
 DECL_ISR(128);
 
@@ -182,6 +183,10 @@ void idt_init(void)
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[IRQ_TIMER], isr32,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+#ifdef BONUS_CORE_HOTPLUGGING
+	set_idt_entry(&entries[IRQ_WAKEUP], isr240,
+		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
+#endif
 	set_idt_entry(&entries[INT_PANIC], isr127,
 		IDT_INT_GATE32 | IDT_PRESENT | IDT_PRIVL(3), GDT_KCODE);
 	set_idt_entry(&entries[INT_SYSCALL], isr128,
@@ -214,8 +219,23 @@ void int_dispatch(struct int_frame *frame)
 			return;
 		case IRQ_TIMER:
 			lapic_eoi();
+		#ifdef BONUS_CORE_HOTPLUGGING
+			// just return on pending(before switch off) tick
+			if (this_cpu->cpu_status == CPU_HALTED)
+				return;
+		#endif
 			sched_yield();
 			return;
+	#ifdef BONUS_CORE_HOTPLUGGING
+		case IRQ_WAKEUP:
+			lapic_eoi();
+			// interrupted a task: let the scheduler power this core off if needed
+			// A halted core has no task and returns to its hlt loop
+			if (cur_task){
+				sched_yield();
+			}
+			return;
+	#endif
 		case INT_SYSCALL:
 		#ifdef BONUS_SYSCALL
 			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
