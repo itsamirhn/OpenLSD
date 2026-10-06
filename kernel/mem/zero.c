@@ -19,10 +19,10 @@ static void zero_page_thread(void *arg)
 	for (;;) {
 		asm volatile("cli" ::: "memory");
 		big_spin_lock(&kernel_lock);
-		if (nuser_tasks == 0)
-			task_destroy(cur_task);
 		while ((page = page_zero_pending()) != NULL)
 			page_zero_complete(page);
+		if (nuser_tasks == 0)
+			task_destroy(cur_task);
 		sched_yield();
 	}
 }

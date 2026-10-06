@@ -1,0 +1,7 @@
+name: Kernel Task - Zero
+description: Checks that the kernel task zero's out freed pages.
+
+regexlines:
+  - Running on CPU 0
+  - page has char A
+  - page has zero 0
