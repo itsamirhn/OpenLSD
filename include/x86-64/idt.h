@@ -53,6 +53,7 @@
 #define IRQ_SPURIOUS       39
 #define IRQ_IDE            46
 #define IRQ_ERROR          51
+#define IRQ_WAKEUP         240  // Inter-cpu interrupt that dis-/en-ables cpu */
 
 /* Software interrupt. */
 #define INT_PANIC          127

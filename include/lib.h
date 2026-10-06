@@ -102,6 +102,8 @@ void *vdso_sym(void *base, const char *name);
 unsigned getcpuid(void);
 int sched_setaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask);
 int sched_getaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask);
+int core_enable(int num);
+int core_disable(int num);
 
 int mquery(struct vma_info *info, void *addr);
 void *mmap(void *addr, size_t len, int prot, int flags, int fd,

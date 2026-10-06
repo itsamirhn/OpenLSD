@@ -23,5 +23,7 @@ enum {
 	SYS_getcpuid,
 	SYS_sched_setaffinity,
 	SYS_sched_getaffinity,
+	SYS_core_enable,
+	SYS_core_disable,
 	NSYSCALLS,
 };

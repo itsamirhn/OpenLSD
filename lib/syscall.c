@@ -194,3 +194,13 @@ int sched_getaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask)
 {
 	return syscall(SYS_sched_getaffinity, 0, pid, cpusetsize, (uint64_t)mask, 0, 0, 0);
 }
+
+int core_enable(int num)
+{
+	return syscall(SYS_core_enable, 0, num, 0, 0, 0, 0, 0);
+}
+
+int core_disable(int num)
+{
+	return syscall(SYS_core_disable, 0, num, 0, 0, 0, 0, 0);
+}
