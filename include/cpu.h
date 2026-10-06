@@ -54,6 +54,18 @@ struct cpuinfo {
 	/* Per-CPU run queue */
 	struct rb_tree runq;
 	size_t runq_picks;
+
+#ifdef BONUS_CORE_HOTPLUGGING
+	/* The core turns itself off once cpu_off is set.
+	 * cpu_off_manual is set by sys_core_disable(), in which
+	 * case the load balancer does not power the core back on.
+	 */
+	volatile bool cpu_off;
+	bool cpu_off_manual;
+
+	/* The core is on but it runs no tasks */
+	volatile bool cpu_idle;
+#endif
 };
 
 #define NCPUS 64

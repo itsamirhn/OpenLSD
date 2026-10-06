@@ -7,4 +7,7 @@ void lapic_init(void);
 int lapic_cpunum(void);
 void lapic_eoi(void);
 void lapic_ipi(int vector);
+void lapic_ipi_cpu(uint8_t apic_id, int vector);
+void lapic_timer_start(void);
+void lapic_timer_stop(void);
 void lapic_startup(uint8_t apic_id, uint32_t addr);

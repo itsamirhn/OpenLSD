@@ -45,9 +45,7 @@ void lapic_init(void)
 	 * Technically, we should callibrate the frequency used according to an
 	 * external time source such as the HPET.
 	 */
-	lapic_write(LAPIC_TDCR, LAPIC_X1);
-	lapic_write(LAPIC_TIMER, LAPIC_PERIODIC | IRQ_TIMER);
-	lapic_write(LAPIC_TICR, 10000000);
+	lapic_timer_start();
 
 	/* Leave LAPIC_LINT0 of the BSP (bootstrap processor) enabled, such
 	 * that it can get interrupts from the 8259A chip.
@@ -91,6 +89,20 @@ void lapic_init(void)
 	lapic_write(LAPIC_TPR, 0);
 }
 
+/* Starts the periodic timer of the local APIC. */
+void lapic_timer_start(void)
+{
+	lapic_write(LAPIC_TDCR, LAPIC_X1);
+	lapic_write(LAPIC_TIMER, LAPIC_PERIODIC | IRQ_TIMER);
+	lapic_write(LAPIC_TICR, 10000000);
+}
+
+// Stop the periodic timer of the local APIC by masking it.
+void lapic_timer_stop(void)
+{
+	lapic_write(LAPIC_TIMER, LAPIC_MASKED);
+}
+
 /* Gets the CPU number according to the local APIC. */
 int lapic_cpunum(void)
 {
@@ -120,6 +132,16 @@ void lapic_ipi(int vector)
 	/* Wait for the delivery. */
 	while (lapic_read(LAPIC_ICR_LO) & LAPIC_DELIVERY)
 		;
+}
+
+/* Sends an IPI to the CPU core with the APIC ID. */
+void lapic_ipi_cpu(uint8_t apic_id, int vector)
+{
+	lapic_write(LAPIC_ICR_HI, apic_id << 24);
+	lapic_write(LAPIC_ICR_LO, LAPIC_FIXED | vector);
+
+	/* Wait for the delivery. */
+	while (lapic_read(LAPIC_ICR_LO) & LAPIC_DELIVERY);
 }
 
 /* Starts up the core with APIC ID by writing the physical address to the boot
