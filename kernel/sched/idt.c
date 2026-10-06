@@ -257,13 +257,16 @@ void int_handler(struct int_frame *frame)
 		/* Interrupt from user mode. */
 		assert(cur_task);
 
-		/* Copy interrupt frame (which is currently on the stack) into
-		 * 'cur_task->task_frame', so that running the task will restart at
-		 * the point of interrupt. */
+		/* Copy the interrupt frame into the task so it can resume. */
 		cur_task->task_frame = *frame;
 
 		/* Avoid using the frame on the stack. */
 		frame = &cur_task->task_frame;
+	}else{
+		//same but kernel task
+		big_spin_lock(&kernel_lock);
+		cur_task->task_lock = *frame;
+		frame = &cur_task->task_lock;
 	}
 
 	/* Dispatch based on the type of interrupt that occurred. */
@@ -290,6 +293,7 @@ void page_fault_handler(struct int_frame *frame)
 			print_int_frame(frame);
 			panic("page fault in kernel task");
 		}
+
 		return;
 	}
 

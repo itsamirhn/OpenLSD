@@ -389,7 +389,7 @@ void task_create(uint8_t *binary, enum task_type type)
 
 void task_create_kernel(void (*entry)(void *), void *arg)
 {
-	struct task *task = task_alloc(0);
+	struct task *task = task_alloc(40);
 	struct page_info *stack;
 	uintptr_t stack_top = KSTACK_TOP - KSTACK_SIZE * 2;
 	void *stack_base = (void *)(stack_top - PAGE_SIZE);
