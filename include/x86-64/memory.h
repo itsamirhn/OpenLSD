@@ -38,6 +38,9 @@
 #define KSTACK_SIZE (31 * PAGE_SIZE)
 #define KSTACK_GAP (PAGE_SIZE)
 
+/* Kernel thread stacks, below the per-CPU kernel stacks. */
+#define KTHREAD_STACK_TOP (KSTACK_TOP - NCPUS * (KSTACK_SIZE + KSTACK_GAP))
+
 /* User address space limit. */
 #ifdef __ASSEMBLER__
 #define USER_LIM 0x800000000000

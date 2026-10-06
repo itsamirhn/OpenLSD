@@ -399,18 +399,14 @@ void task_create(uint8_t *binary, enum task_type type)
 void kthread_create(void (*entry)(void *), void *arg)
 {
 	struct task *task = task_alloc_type(0, TASK_TYPE_KERNEL);
-	struct page_info *stack;
-	uintptr_t stack_top = KSTACK_TOP - KSTACK_SIZE * 2;
-	void *stack_base = (void *)(stack_top - PAGE_SIZE);
 
 	assert(entry != NULL);
 	assert(task != NULL);
 
-	stack = page_alloc(ALLOC_ZERO);
+	// PIDs: pid_max - 1, pid_max - 2, pid_max - 3, ...
+	uintptr_t stack_top = KTHREAD_STACK_TOP - (uintptr_t)(pid_max - 1 - task->task_pid) * (KSTACK_SIZE + KSTACK_GAP);
+	populate_region(kernel_pml4, (void *)(stack_top - KSTACK_SIZE), KSTACK_SIZE, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
 
-	assert(stack != NULL);
-	assert(page_insert(kernel_pml4, stack, stack_base,
-		PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
 	task->task_frame.rip = (uintptr_t)kthread_entry;
 	task->task_frame.rsp = stack_top - sizeof(uintptr_t);
 	task->task_frame.rdi = (uintptr_t)entry;
