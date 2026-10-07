@@ -246,7 +246,7 @@ static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 	list_init(&task->task_node);
 
 	#ifdef BONUS_VDSO
-	assert(task_setup_vdso(task) == 0);
+	if (type == TASK_TYPE_USER) assert(task_setup_vdso(task) == 0);
 	#endif
 
 	/* You will set task->task_frame.rip later. */
@@ -398,21 +398,25 @@ void task_create(uint8_t *binary, enum task_type type)
 
 void kthread_create(void (*entry)(void *), void *arg)
 {
-	struct task *task = task_alloc_type(0, TASK_TYPE_KERNEL);
 
 	assert(entry != NULL);
-	assert(task != NULL);
 
-	// PIDs: pid_max - 1, pid_max - 2, pid_max - 3, ...
-	uintptr_t stack_top = KTHREAD_STACK_TOP - (uintptr_t)(pid_max - 1 - task->task_pid) * (KSTACK_SIZE + KSTACK_GAP);
-	populate_region(kernel_pml4, (void *)(stack_top - KSTACK_SIZE), KSTACK_SIZE, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
 
-	task->task_frame.rip = (uintptr_t)kthread_entry;
-	task->task_frame.rsp = stack_top - sizeof(uintptr_t);
-	task->task_frame.rdi = (uintptr_t)entry;
-	task->task_frame.rsi = (uintptr_t)arg;
+	for (size_t i = 0; i < ncpus; ++i) {
+		struct task *task = task_alloc_type(0, TASK_TYPE_KERNEL);
+		assert(task != NULL);
+		// PIDs: pid_max - 1, pid_max - 2, pid_max - 3, ...
+		uintptr_t stack_top = KTHREAD_STACK_TOP - (uintptr_t)(pid_max - 1 - task->task_pid) * (KSTACK_SIZE + KSTACK_GAP);
+		populate_region(kernel_pml4, (void *)(stack_top - KSTACK_SIZE), KSTACK_SIZE, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC);
+		task->task_affinity = 1ULL << i;
+		task->task_frame.rip = (uintptr_t)kthread_entry;
+		task->task_frame.rsp = stack_top - sizeof(uintptr_t);
+		task->task_frame.rdi = (uintptr_t)entry;
+		task->task_frame.rsi = (uintptr_t)arg;
 
-	sched_enqueue(task);
+		sched_enqueue(task);
+	}
+
 }
 
 static void task_dispose_address_space(struct task *task)
