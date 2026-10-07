@@ -29,6 +29,8 @@ void boot_cpus(void)
 
 	/* Boot each CPU one at a time. */
 	for (cpu = cpus; cpu < cpus + ncpus; ++cpu) {
+		list_init(&cpu->cpu_zero_pending); // init list on each cpu
+
 		/* Skip the boot CPU */
 		if (cpu == boot_cpu) {
 			continue;

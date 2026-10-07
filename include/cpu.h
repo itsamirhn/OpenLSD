@@ -55,6 +55,9 @@ struct cpuinfo {
 	struct rb_tree runq;
 	size_t runq_picks;
 
+	/* Per-CPU list of pending zeroed pages */
+	struct list cpu_zero_pending;
+
 #ifdef BONUS_CORE_HOTPLUGGING
 	/* The core turns itself off once cpu_off is set.
 	 * cpu_off_manual is set by sys_core_disable(), in which

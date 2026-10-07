@@ -4,6 +4,7 @@
 #include <spinlock.h>
 #include <string.h>
 #include <atomic.h>
+#include <cpu.h>
 
 #include <kernel/mem.h>
 
@@ -19,12 +20,6 @@ struct page_info *pages;
 struct list buddy_free_list[BUDDY_MAX_ORDER];
 static struct list zero_pending;
 static bool zero_pending_enabled;
-static struct spinlock zero_lock = {
-	.rank = RANK_ZERO,
-#ifdef DEBUG_SPINLOCK
-	.name = "zero_lock",
-#endif
-};
 
 #ifndef USE_BIG_KERNEL_LOCK
 /* Lock for the buddy allocator. */
@@ -321,22 +316,18 @@ void page_free(struct page_info *pp)
 		return;
 	}
 
-	fine_spin_lock(&zero_lock);
 	pp->pp_zero = 1;
-	list_add_tail(&zero_pending, &pp->pp_node);
-	fine_spin_unlock(&zero_lock);
+	list_add_tail(&this_cpu->cpu_zero_pending, &pp->pp_node);
 }
 
 struct page_info *page_zero_pending(void)
 {
 	struct page_info *page = NULL;
 
-	fine_spin_lock(&zero_lock);
-	if (!list_is_empty(&zero_pending)) {
-		page = container_of(list_pop(&zero_pending), struct page_info, pp_node);
+	if (!list_is_empty(&this_cpu->cpu_zero_pending)) {
+		page = container_of(list_pop(&this_cpu->cpu_zero_pending), struct page_info, pp_node);
 		page->pp_zero = 0;
 	}
-	fine_spin_unlock(&zero_lock);
 	return page;
 }
 
@@ -348,7 +339,6 @@ void page_zero_complete(struct page_info *pp)
 
 void page_zero_enable(void)
 {
-	list_init(&zero_pending);
 	zero_pending_enabled = true;
 }
 
