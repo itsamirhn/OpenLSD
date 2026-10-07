@@ -1,0 +1,15 @@
+name: Core Hotplugging - Manual (4 cores)
+description: Power cores off and on manually with syscalls
+bonus: CORE_HOTPLUGGING
+qemu: -smp 4
+
+regexlines:
+  - "SMP: CPU 2 powered off"
+  - "SMP: CPU 2 powered on"
+  - ".PID     1. Never ran on disabled CPU 2"
+  - ".PID     1. Ran pinned on re-enabled CPU 2"
+  - ".PID     1. Affinity broken, its cores are disabled"
+  - ".PID     1. Moved off disabled CPU 2"
+  - ".PID     1. Affinity restored, its cores are enabled again"
+  - ".PID     1. Ran pinned on re-enabled CPU 2 again"
+  - ".PID     1. Exiting gracefully"
