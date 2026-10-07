@@ -39,6 +39,7 @@ uint64_t core_allowed_mask(void){
  // until at least one core is turned on, and thus the task can start running on those corresponding
  // cores with its affinitiy
 uint64_t core_task_affinity(struct task *task){
+	if(task->task_type == TASK_TYPE_KERNEL) return task->task_affinity; // kernel tasks should stay on the same core
 	uint64_t allowed = core_allowed_mask();
 	uint64_t mask = task->task_affinity & allowed;
 
@@ -55,7 +56,7 @@ static bool core_scan_affinity(int num, const char *what){
 	for (pid_t pid = 1; pid < pid_max; ++pid) {
 		task = tasks[pid];
 
-		if (!task || task->task_status == TASK_DYING || !(task->task_affinity & bit)){
+		if (!task || task->task_status == TASK_DYING || !(task->task_affinity & bit) || task->task_type == TASK_TYPE_KERNEL) {
 			continue;
 		}
 
@@ -191,6 +192,9 @@ void core_auto_wake(void){
 
 	for (int i = 0; i < runq.size; ++i) {
 		task = container_of(rb_index_element(&runq, i), struct task, task_sched_rb);
+		if (task->task_type == TASK_TYPE_KERNEL) {
+			continue; // should not wake up a core for a kernel task
+		}
 
 		if (core_task_affinity(task) & idle){
 			continue;
