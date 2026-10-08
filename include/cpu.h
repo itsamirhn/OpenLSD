@@ -55,6 +55,9 @@ struct cpuinfo {
 	struct rb_tree runq;
 	size_t runq_picks;
 
+	/* The zero page thread for this CPU. */
+	struct task *cpu_zero_task;
+
 	/* Per-CPU list of pending zeroed pages */
 	struct list cpu_zero_pending;
 

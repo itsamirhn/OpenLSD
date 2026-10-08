@@ -317,6 +317,7 @@ void page_free(struct page_info *pp)
 
 	pp->pp_zero = 1;
 	list_add_tail(&this_cpu->cpu_zero_pending, &pp->pp_node);
+	zero_page_thread_wake();
 }
 
 struct page_info *page_zero_pending(void)

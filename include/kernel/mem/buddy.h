@@ -64,6 +64,7 @@ struct page_info *page_zero_pending(void);
 void page_zero_complete(struct page_info *pp);
 void page_zero_enable(void);
 void zero_page_thread_init(void);
+void zero_page_thread_wake(void);
 void buddy_migrate(void);
 int buddy_grow(struct page_table *pml4, size_t index);
 
