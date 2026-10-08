@@ -11,11 +11,9 @@ extern struct spinlock kernel_lock;
 
 extern size_t nuser_tasks;
 
-static void zero_page_thread(void *arg)
-{
+static void zero_page_thread(void *arg){
 	struct page_info *page;
 
-	(void)arg;
 	for (;;) {
 		asm volatile("cli" ::: "memory");
 		big_spin_lock(&kernel_lock);
