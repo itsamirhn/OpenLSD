@@ -112,6 +112,12 @@ int sys_core_enable(int num){
 	}
 
 	core_wait(cpu, CPU_STARTED);
+
+	if (!(core_task_affinity(cur_task) & (1ULL << lapic_cpunum()))) {
+		cur_task->task_frame.rax = 0;
+		sched_yield();
+	}
+	
 	return 0;
 }
 
