@@ -60,14 +60,6 @@ struct cpuinfo {
 
 	/* Per-CPU list of pending zeroed pages */
 	struct list cpu_zero_pending;
-
-#ifdef BONUS_CORE_HOTPLUGGING
-	/* The core turns itself off once cpu_off is set. */
-	volatile bool cpu_off;
-
-	/* The core is on but it runs no tasks */
-	volatile bool cpu_idle;
-#endif
 };
 
 #define NCPUS 64
@@ -78,6 +70,6 @@ extern struct cpuinfo *boot_cpu;
 #define this_cpu (cpus + lapic_cpunum())
 extern size_t ncpus;
 
-#define CPUS_MASK (1ULL << ncpus) - 1
+#define CPUS_MASK ((1ULL << ncpus) - 1)
 
 #endif /* !defined(__ASSEMBLER__) */

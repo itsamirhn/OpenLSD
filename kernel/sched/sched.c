@@ -160,7 +160,7 @@ void sched_yield(void)
 	#endif
 
 	#ifdef BONUS_CORE_HOTPLUGGING
-	if (cpu->cpu_off) sched_power_off();
+	if (core_is_disabled(cpu)) sched_power_off();
 	#endif
 
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
@@ -196,7 +196,6 @@ void sched_yield(void)
 	cur_task = NULL;
 #ifdef BONUS_CORE_HOTPLUGGING
 	uint64_t idle_start = read_tsc();
-	cpu->cpu_idle = true;
 #endif
 	while (!cpu->runq.root && (nuser_tasks > 0 || cpu != boot_cpu)) {
 		big_spin_unlock(&kernel_lock);
@@ -207,9 +206,6 @@ void sched_yield(void)
 		if (core_should_power_off(idle_start)) sched_power_off();
 	#endif
 	}
-#ifdef BONUS_CORE_HOTPLUGGING
-	cpu->cpu_idle = false;
-#endif
 
 	if (!cpu->runq.root) sched_halt();
 

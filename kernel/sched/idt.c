@@ -218,24 +218,15 @@ void int_dispatch(struct int_frame *frame)
 			page_fault_handler(frame);
 			return;
 		case IRQ_TIMER:
-			lapic_eoi();
-		#ifdef BONUS_CORE_HOTPLUGGING
-			// just return on pending(before switch off) tick
-			if (this_cpu->cpu_status == CPU_HALTED)
-				return;
-		#endif
-			sched_yield();
-			return;
 	#ifdef BONUS_CORE_HOTPLUGGING
 		case IRQ_WAKEUP:
-			lapic_eoi();
-			// interrupted a task: let the scheduler power this core off if needed
-			// A halted core has no task and returns to its hlt loop
-			if (cur_task){
-				sched_yield();
-			}
-			return;
 	#endif
+			lapic_eoi();
+			// A parked core has no task so it will return to its hlt loop. Otherwise
+			// the scheduler also powers this core off if it was disabled.
+			if (cur_task)
+				sched_yield();
+			return;
 		case INT_SYSCALL:
 		#ifdef BONUS_SYSCALL
 			frame->rax = syscall(frame->rax, frame->rdi, frame->rsi,
