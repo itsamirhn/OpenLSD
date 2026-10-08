@@ -9,7 +9,7 @@ int sys_core_disable(int num);
 
 uint64_t core_allowed_mask(void);
 uint64_t core_task_affinity(struct task *task);
-bool core_should_power_off(uint64_t *idle_start);
+bool core_should_power_off(uint64_t idle_start);
 void core_auto_wake(void);
 void __attribute__((noreturn)) core_park(void);
 #endif

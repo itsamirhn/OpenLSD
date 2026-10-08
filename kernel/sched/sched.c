@@ -204,7 +204,7 @@ void sched_yield(void)
 		big_spin_lock(&kernel_lock);
 		if (runq.size) sched_balance();
 	#ifdef BONUS_CORE_HOTPLUGGING
-		if (core_should_power_off(&idle_start)) sched_power_off();
+		if (core_should_power_off(idle_start)) sched_power_off();
 	#endif
 	}
 #ifdef BONUS_CORE_HOTPLUGGING

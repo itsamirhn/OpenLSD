@@ -19,20 +19,12 @@ extern struct spinlock kernel_lock;
 #define CORE_IDLE_OFF_MS 10
 
 extern struct rb_tree runq;
-extern struct task **tasks;
-extern pid_t pid_max;
 
-// Cores not turned off by sys_core_disable()
+// Cores turned off by sys_core_disable(); the load balancer leaves them off
+static uint64_t core_disabled;
+
 uint64_t core_allowed_mask(void){
-	uint64_t mask = 0;
-
-	for (size_t i = 0; i < ncpus; ++i){
-		if (!cpus[i].cpu_off_manual){
-			mask |= 1ULL << i;
-		}
-	}
-
-	return mask;
+	return CPUS_MASK & ~core_disabled;
 }
 
  // If affinity cores were turned off manually, then the task can run on all enabled cores
@@ -44,33 +36,6 @@ uint64_t core_task_affinity(struct task *task){
 	uint64_t mask = task->task_affinity & allowed;
 
 	return mask ? mask : allowed;
-}
-
- // Check or log if core is bound to any task
-static bool core_scan_affinity(int num, const char *what){
-	uint64_t bit = 1ULL << num, all = CPUS_MASK;
-	uint64_t others = core_allowed_mask() & ~bit;
-	struct task *task;
-	bool ret = false;
-
-	for (pid_t pid = 1; pid < pid_max; ++pid) {
-		task = tasks[pid];
-
-		if (!task || task->task_status == TASK_DYING || !(task->task_affinity & bit) || task->task_type == TASK_TYPE_KERNEL) {
-			continue;
-		}
-
-		if (!what) {
-			if ((task->task_affinity & all) != all){
-				return true;
-			}
-		} else if (!(task->task_affinity & others)) {
-			cprintf("[PID %5u] Affinity %s\n", task->task_pid, what);
-			ret = true;
-		}
-	}
-
-	return ret;
 }
 
 static void core_power_on(struct cpuinfo *cpu){
@@ -102,10 +67,9 @@ int sys_core_enable(int num){
 	}
 
 	cpu = cpus + num;
-	if (cpu->cpu_off_manual) {
-		cpu->cpu_off_manual = false;
-		core_scan_affinity(num, "restored, its cores are enabled again");
-	}
+	
+	// Atomically clear this core's bit in core_disabled, so the load balancer may use it again.
+	__atomic_and_fetch(&core_disabled, ~(1ULL << num), __ATOMIC_SEQ_CST);
 
 	if (cpu->cpu_off){
 		core_power_on(cpu);
@@ -135,10 +99,8 @@ int sys_core_disable(int num){
 		return -EPERM;
 	}
 
-	if (!cpu->cpu_off_manual) {
-		cpu->cpu_off_manual = true;
-		core_scan_affinity(num, "broken, its cores are disabled");
-	}
+	// Atomically set this core's bit in core_disabled, so the load balancer leaves it off.
+	__atomic_or_fetch(&core_disabled, 1ULL << num, __ATOMIC_SEQ_CST);
 	cpu->cpu_off = true;
 
 	if (cpu == this_cpu) {
@@ -152,7 +114,8 @@ int sys_core_disable(int num){
 }
 
 // Check if the core needs to be put to sleep due to idleling or it has an pinned task
-bool core_should_power_off(uint64_t *idle_start){
+// Tasks bound to this core wake it up again through core_auto_wake()
+bool core_should_power_off(uint64_t idle_start){
 	struct cpuinfo *cpu = this_cpu;
 
 	if (cpu->cpu_off){
@@ -163,12 +126,7 @@ bool core_should_power_off(uint64_t *idle_start){
 		return false;
 	}
 
-	if (read_tsc() - *idle_start < CORE_IDLE_OFF_MS * time_tsc_khz()){
-		return false;
-	}
-
-	if (core_scan_affinity(cpu - cpus, NULL)) {
-		*idle_start = read_tsc();
+	if (read_tsc() - idle_start < CORE_IDLE_OFF_MS * time_tsc_khz()){
 		return false;
 	}
 
@@ -187,7 +145,7 @@ void core_auto_wake(void){
 		if (cpu->cpu_status == CPU_STARTED && !cpu->cpu_off && cpu->cpu_idle){
 			idle |= 1ULL << i;
 		}
-		if (cpu->cpu_status == CPU_HALTED && cpu->cpu_off && !cpu->cpu_off_manual){
+		if (cpu->cpu_status == CPU_HALTED && cpu->cpu_off && !(core_disabled & (1ULL << i))){
 			parked |= 1ULL << i;
 		}
 	}
