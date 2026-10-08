@@ -18,7 +18,6 @@ struct page_info *pages;
  * specific buddy order. Buddy orders go from 0 to BUDDY_MAX_ORDER - 1
  */
 struct list buddy_free_list[BUDDY_MAX_ORDER];
-static struct list zero_pending;
 static bool zero_pending_enabled;
 
 #ifndef USE_BIG_KERNEL_LOCK

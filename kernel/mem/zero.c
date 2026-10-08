@@ -1,6 +1,8 @@
 #include <types.h>
 #include <string.h>
 
+#include <cpu.h>
+
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <kernel/sched/task.h>
@@ -25,7 +27,9 @@ static void zero_page_thread(void *arg){
 	}
 }
 
+// One zero thread per CPU, as the pending lists are per CPU
 void zero_page_thread_init(void)
 {
-	kthread_create(zero_page_thread, NULL);
+	for (size_t i = 0; i < ncpus; i++) 
+		kthread_create(zero_page_thread, NULL, 1ULL << i);
 }

@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <cpu.h>
 #include <string.h>
 
 #include <kernel/mem.h>
@@ -36,7 +37,7 @@ static void zero_test_worker(void *arg)
 static int run_test(struct probe_frame *frame)
 {
 	(void)frame;
-	kthread_create(zero_test_worker, NULL);
+	kthread_create(zero_test_worker, NULL, 1ULL << (this_cpu - cpus));
 	return __checksum__;
 }
 
