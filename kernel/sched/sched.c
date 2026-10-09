@@ -84,6 +84,7 @@ void wakeup(void) {
 		struct task *task = rb_first(&sleepq, struct task, task_sched_rb);
 		if (task->task_wakeup_tsc > read_tsc()) break;
 		rb_remove(&sleepq, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
 		sched_enqueue_local(task);
 	}
 }
@@ -99,6 +100,7 @@ static void sched_balance(void) {
 		task = container_of(rb_index_element(&runq, i), struct task, task_sched_rb);
 		if (!runnable_by_me(task)) continue;
 		rb_remove(&runq, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
 		runq_insert(local, task);
 		pulled = task;
 		break;
@@ -111,6 +113,7 @@ static void sched_balance(void) {
 		if (task == pulled)
 			task = container_of(rb_index_element(local, local->size - 2), struct task, task_sched_rb);
 		rb_remove(local, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
 		runq_insert(&runq, task);
 	}
 
@@ -139,6 +142,7 @@ static void sched_power_off(void){
 	while (cpu->runq.root) {
 		task = rb_first(&cpu->runq, struct task, task_sched_rb);
 		rb_remove(&cpu->runq, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
 		sched_enqueue(task);
 	}
 
@@ -230,13 +234,18 @@ void sched_enqueue(struct task *task) {
 
 void sched_dequeue(struct task *task) {
 	struct rb_node *top = &task->task_sched_rb;
+	struct rb_tree *tree = NULL;
 
 	fine_spin_lock(&runq_lock);
 	while (top->parent) top = top->parent;
 	if (top == runq.root)
-		rb_remove(&runq, &task->task_sched_rb);
+		tree = &runq;
 	else if (top == this_cpu->runq.root)
-		rb_remove(&this_cpu->runq, &task->task_sched_rb);
+		tree = &this_cpu->runq;
+	if (tree) {
+		rb_remove(tree, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
+	}
 	fine_spin_unlock(&runq_lock);
 }
 
@@ -255,4 +264,5 @@ void sched_sleep(uint64_t ns) {
 
 void sched_kick_from_bed(struct task *task) {
 	rb_remove(&sleepq, &task->task_sched_rb);
+	rb_node_init(&task->task_sched_rb);
 }

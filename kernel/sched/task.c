@@ -217,6 +217,7 @@ static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 	task->task_karma = 0;
 	task->task_start_tsc = 0;;
 	task->task_affinity = CPUS_MASK;
+	rb_node_init(&task->task_sched_rb);
 	
 #ifndef USE_BIG_KERNEL_LOCK
 	spin_init(&task->task_lock, "task_lock",  0); // TODO: Add dynamic name
