@@ -478,6 +478,9 @@ void task_free(struct task *task)
 {
 	struct task *waiting;
 
+	// Leaving the parent's lists below needs the parent's lock
+	if (!list_is_empty(&task->task_child)) assert(fine_spin_haslock(&pid2task(task->task_ppid, 0)->task_lock));
+
 	/* If we are freeing the current task, switch to the kernel_pml4
 	 * before freeing the page tables, just in case the page gets re-used.
 	 */
@@ -485,15 +488,20 @@ void task_free(struct task *task)
 		load_pml4(PADDR(kernel_pml4));
 	}
 
+	// Orphan the children before the parent and its PID go away
+	fine_spin_lock(&task->task_lock);
+	while (!list_is_empty(&task->task_zombies)) task_free(container_of(list_pop(&task->task_zombies), struct task, task_node));
+
+	while (!list_is_empty(&task->task_children)) {
+		struct task *child = container_of(list_pop(&task->task_children), struct task, task_child);
+		fine_spin_lock(&child->task_lock);
+		child->task_ppid = 0;
+		fine_spin_unlock(&child->task_lock);
+	}
+	fine_spin_unlock(&task->task_lock);
+
 	/* Unmap the task from the PID map. */
 	tasks[task->task_pid] = NULL;
-
-	fine_spin_lock(&task->task_lock);
-	while (!list_is_empty(&task->task_zombies)) 
-		task_free(container_of(list_pop(&task->task_zombies), struct task, task_node));
-
-	while (!list_is_empty(&task->task_children)) list_pop(&task->task_children);
-	fine_spin_unlock(&task->task_lock);
 
 	list_del(&task->task_child);
 	list_del(&task->task_node);
@@ -524,15 +532,25 @@ void task_free(struct task *task)
 void task_destroy(struct task *task)
 {
 	bool self = task == cur_task;
-	list_del(&task->task_node);
+	struct task *parent;
+
 	if (task->task_status == TASK_RUNNABLE) sched_dequeue(task);
 
 	#ifdef BONUS_SLEEP_TIME
 	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
 	#endif
 
-	struct task *parent = task->task_ppid ? pid2task(task->task_ppid, 0) : NULL;
-	if (parent) fine_spin_lock(&parent->task_lock);
+	// Lock the task, then try its parent
+	while (true) {
+		fine_spin_lock(&task->task_lock);
+		parent = task->task_ppid ? pid2task(task->task_ppid, 0) : NULL;
+		if (!parent || fine_spin_trylock(&parent->task_lock)) break;
+		fine_spin_unlock(&task->task_lock);
+		asm volatile("pause" ::: "memory");
+	}
+	fine_spin_unlock(&task->task_lock);
+
+	list_del(&task->task_node);
 
 	if (parent && !list_is_empty(&task->task_child)) {
 		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
