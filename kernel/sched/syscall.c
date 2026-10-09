@@ -151,6 +151,17 @@ static int sys_kill(pid_t pid)
 	}
 
 	cprintf("[PID %5u] Exiting gracefully\n", task->task_pid);
+
+	fine_spin_lock(&task->task_lock);
+	task->task_killed = true;
+	fine_spin_unlock(&task->task_lock);
+	while (task != cur_task && task->task_status != TASK_NOT_RUNNABLE && task->task_status != TASK_DYING) {
+		if (sched_dequeue(task)) break;
+		big_spin_unlock(&kernel_lock);
+		asm volatile("pause" ::: "memory");
+		big_spin_lock(&kernel_lock);
+	}
+
 	task_destroy(task);
 
 	return 0;

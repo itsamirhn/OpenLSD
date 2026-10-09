@@ -217,6 +217,7 @@ static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 	task->task_karma = 0;
 	task->task_start_tsc = 0;;
 	task->task_affinity = CPUS_MASK;
+	task->task_killed = false;
 	rb_node_init(&task->task_sched_rb);
 	
 #ifndef USE_BIG_KERNEL_LOCK
@@ -534,8 +535,6 @@ void task_destroy(struct task *task)
 	bool self = task == cur_task;
 	struct task *parent;
 
-	if (task->task_status == TASK_RUNNABLE) sched_dequeue(task);
-
 	#ifdef BONUS_SLEEP_TIME
 	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
 	#endif
@@ -553,7 +552,7 @@ void task_destroy(struct task *task)
 	list_del(&task->task_node);
 
 	if (parent && !list_is_empty(&task->task_child)) {
-		if (parent->task_status == TASK_NOT_RUNNABLE && (!parent->task_wait || parent->task_wait == task)) {
+		if (parent->task_status == TASK_NOT_RUNNABLE && !parent->task_killed && (!parent->task_wait || parent->task_wait == task)) {
 			if (parent->task_rstatus) {
 				// rstatus lives in the parent's address space
 				physaddr_t cr3 = read_cr3();

@@ -163,6 +163,13 @@ void sched_yield(void)
 	wakeup();
 	#endif
 
+	if (cur_task && cur_task->task_killed) {
+		struct task *task = cur_task;
+		cur_task = NULL;
+		load_pml4(PADDR(kernel_pml4));
+		task->task_status = TASK_NOT_RUNNABLE;
+	}
+
 	#ifdef BONUS_CORE_HOTPLUGGING
 	if (core_is_disabled(cpu)) sched_power_off();
 	#endif
@@ -170,9 +177,9 @@ void sched_yield(void)
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
 		cur_task->task_karma += read_tsc() - cur_task->task_start_tsc;
 		if (!runnable_by_me(cur_task)) {
-		sched_enqueue(cur_task);
-		cur_task = NULL;
-		load_pml4(PADDR(kernel_pml4));
+			sched_enqueue(cur_task);
+			cur_task = NULL;
+			load_pml4(PADDR(kernel_pml4));
 		}
 	}
 
@@ -182,6 +189,11 @@ void sched_yield(void)
 	while (cpu->runq.root) {
 		struct task *task = rb_first(&cpu->runq, struct task, task_sched_rb);
 		rb_remove(&cpu->runq, &task->task_sched_rb);
+		rb_node_init(&task->task_sched_rb);
+		if (task->task_killed) {
+			task->task_status = TASK_NOT_RUNNABLE;
+			continue;
+		}
 		if (!runnable_by_me(task)) {
 			sched_enqueue(task);
 			continue;
@@ -232,7 +244,7 @@ void sched_enqueue(struct task *task) {
 	fine_spin_unlock(&runq_lock);
 }
 
-void sched_dequeue(struct task *task) {
+bool sched_dequeue(struct task *task) {
 	struct rb_node *top = &task->task_sched_rb;
 	struct rb_tree *tree = NULL;
 
@@ -245,8 +257,10 @@ void sched_dequeue(struct task *task) {
 	if (tree) {
 		rb_remove(tree, &task->task_sched_rb);
 		rb_node_init(&task->task_sched_rb);
+		task->task_status = TASK_NOT_RUNNABLE;
 	}
 	fine_spin_unlock(&runq_lock);
+	return tree != NULL;
 }
 
 void sched_sleep(uint64_t ns) {

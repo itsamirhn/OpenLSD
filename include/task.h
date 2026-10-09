@@ -52,6 +52,9 @@ struct task {
 	/* The task status. */
 	unsigned task_status;
 
+	/* Killed by its parent, which waits for its core to drop it. */
+	bool task_killed;
+
 	/* The number of times the task has been run. */
 	unsigned task_runs;
 
