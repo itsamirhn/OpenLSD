@@ -1,4 +1,10 @@
-# LAB 6 bonus
+# LAB 6 
+
+## Kernel Tasks
+The most of kernel task lives in mem/zero.c. Where we generate a per cpu kernel task, which uses the per cpu zero_pending list, in ordre to reduce locking while in the kernel task.
+
+In kthread_create() is where the kernel tasks are created with its kernel stack. The pid's are assgined decreasingly from pid_max - 1, so the first kernel task would have PID 65535. This has been choesen to not influence user tasks PIDs.
+
 
 ## Core Pinning (Affinity)
 
@@ -9,6 +15,8 @@
 Cores can be powered off and on manually with sys_core_disable(num) and sys_core_enable(num) or automatically by the load balances. A disabled core, moves in a sleep loop, before that it moves its running task and its local run queue to the global run queue, stops its LAPIC timer. To enable it, we send it an IPI (IRQ_WAKEUP), after which it restarts its timer and enters the scheduler again. The same IPI is used to make a running core enter the scheduler right away when it should power off, instead of waiting for its next timer tick.
 
 The load balancer, disables a core, other than the boot CPU, once it has been idle for 10 ms. When a new task gets in the global run queue, a sleeping core is started. Also taking account of the affinity if that was set-up for the specific task, so a task pinned to a core is not disabled by the load balancer. A core disabled with sys_core_disable() stays off until sys_core_enable() is called.
+
+The core hotplugging has been thus bulid to take task affinity into account.
 
 
 
