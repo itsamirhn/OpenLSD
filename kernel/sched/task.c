@@ -197,8 +197,7 @@ static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 	 */
 	pid_t step = type == TASK_TYPE_KERNEL ? -1 : 1;
 	for (pid = step > 0 ? 1 : pid_max - 1; pid > 0 && pid < pid_max; pid += step) {
-		if (!tasks[pid]) {
-			tasks[pid] = task;
+		if (atomic_cmpxchg(&tasks[pid], NULL, task)) {
 			task->task_pid = pid;
 			break;
 		}
