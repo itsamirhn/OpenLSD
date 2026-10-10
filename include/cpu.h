@@ -60,6 +60,15 @@ struct cpuinfo {
 
 	/* Per-CPU list of pending zeroed pages */
 	struct list cpu_zero_pending;
+
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	/* Per-CPU cache of 4k pages. */
+	struct list cpu_page_cache;
+	size_t cpu_page_cache_count;
+
+	/* The task that returns excess cached pages to the frame allocator. */
+	struct task *cpu_frame_task;
+#endif
 };
 
 #define NCPUS 64
