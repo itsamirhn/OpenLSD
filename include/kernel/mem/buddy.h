@@ -70,6 +70,7 @@ void frame_cache_thread_init(void);
 void frame_cache_thread_wake(void);
 void page_cache_enable(void);
 void page_cache_reclaim(void);
+void page_cache_flush(void);
 #endif
 void buddy_migrate(void);
 int buddy_grow(struct page_table *pml4, size_t index);

@@ -108,6 +108,16 @@ void page_cache_reclaim(void)
 	}
 }
 
+// Flush the cache before a CPU is turned off
+void page_cache_flush(void)
+{
+	if (!page_cache_enabled) return;
+
+	fine_spin_lock(&buddy_lock);
+	page_cache_drain(this_cpu->cpu_page_cache_count);
+	fine_spin_unlock(&buddy_lock);
+}
+
 void page_cache_enable(void)
 {
 	// No Page cache for one CPU

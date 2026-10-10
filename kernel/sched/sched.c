@@ -150,6 +150,10 @@ static void sched_power_off(void){
 	while ((page = page_zero_pending()) != NULL)
 		page_zero_complete(page);
 
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	page_cache_flush();
+#endif
+
 	core_park();
 }
 #endif
