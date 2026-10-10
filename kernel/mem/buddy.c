@@ -19,6 +19,13 @@ struct page_info *pages;
  */
 struct list buddy_free_list[BUDDY_MAX_ORDER];
 static bool zero_pending_enabled;
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+static bool page_cache_enabled;
+
+#define PAGE_CACHE_REFILL_ORDER 5
+#define PAGE_CACHE_LOW 32
+#define PAGE_CACHE_HIGH 128
+#endif
 
 #ifndef USE_BIG_KERNEL_LOCK
 /* Lock for the buddy allocator. */
@@ -31,6 +38,87 @@ struct spinlock buddy_lock = {
 #endif
 
 static struct page_info *buddy_merge(struct page_info *page);
+
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+static void page_cache_push(struct page_info *page)
+{
+	assert(page_cache_enabled);
+	assert(page->pp_order == BUDDY_4K_PAGE);
+	assert(page->pp_free);
+	assert(!page->pp_cached);
+
+	page->pp_cached = 1;
+	list_add_tail(&this_cpu->cpu_page_cache, &page->pp_node);
+	++this_cpu->cpu_page_cache_count;
+
+	if (this_cpu->cpu_page_cache_count > PAGE_CACHE_HIGH) frame_cache_thread_wake();
+}
+
+static struct page_info *page_cache_pop(void)
+{
+	struct page_info *page;
+
+	if (list_is_empty(&this_cpu->cpu_page_cache)) return NULL;
+
+	page = container_of(list_pop(&this_cpu->cpu_page_cache), struct page_info, pp_node);
+	assert(page->pp_cached);
+	assert(page->pp_free);
+	page->pp_cached = 0;
+	page->pp_free = 0;
+	--this_cpu->cpu_page_cache_count;
+	return page;
+}
+
+static int page_cache_refill(void)
+{
+	struct page_info *block;
+	size_t i;
+
+	fine_spin_lock(&buddy_lock);
+	block = buddy_find(PAGE_CACHE_REFILL_ORDER);
+	fine_spin_unlock(&buddy_lock);
+	if (block == NULL) return -1;
+
+	for (i = 0; i < (1UL << PAGE_CACHE_REFILL_ORDER); ++i) {
+		struct page_info *page = block + i;
+
+		page->pp_order = BUDDY_4K_PAGE;
+		page->pp_free = 1;
+		page_cache_push(page);
+	}
+
+	return 0;
+}
+
+static void page_cache_drain(size_t count)
+{
+	while (count-- != 0) {
+		struct page_info *page = page_cache_pop();
+
+		if (page == NULL) return;
+
+		page->pp_free = 1;
+		buddy_merge(page);
+	}
+}
+
+void page_cache_reclaim(void)
+{
+	size_t count = this_cpu->cpu_page_cache_count;
+
+	if (count > PAGE_CACHE_LOW) {
+		fine_spin_lock(&buddy_lock);
+		page_cache_drain(count - PAGE_CACHE_LOW);
+		fine_spin_unlock(&buddy_lock);
+	}
+}
+
+void page_cache_enable(void)
+{
+	// No Page cache for one CPU
+	page_cache_enabled = ncpus > 1;
+}
+#endif
 
 static void page_free_immediate(struct page_info *pp)
 {
@@ -75,6 +163,7 @@ void show_buddy_info(void)
 
 	cprintf("Buddy allocator:\n");
 
+	fine_spin_lock(&buddy_lock);
 	for (order = 0; order < BUDDY_MAX_ORDER; ++order) {
 		nfree_pages = count_free_pages(order);
 
@@ -82,6 +171,7 @@ void show_buddy_info(void)
 
 		nfree += nfree_pages * (1 << (order + 12));
 	}
+	fine_spin_unlock(&buddy_lock);
 
 	cprintf("  free: %u kiB\n", nfree / 1024);
 }
@@ -95,10 +185,18 @@ size_t count_total_free_pages(void)
 	size_t nfree_pages;
 	size_t nfree = 0;
 
+	fine_spin_lock(&buddy_lock);
 	for (order = 0; order < BUDDY_MAX_ORDER; ++order) {
 		nfree_pages = count_free_pages(order);
 		nfree += nfree_pages * (1 << order);
 	}
+	fine_spin_unlock(&buddy_lock);
+
+	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	if (page_cache_enabled) {
+		for (size_t i = 0; i < ncpus; ++i) nfree += cpus[i].cpu_page_cache_count;
+	}
+	#endif
 
 	return nfree;
 }
@@ -169,7 +267,11 @@ struct page_info *buddy_merge(struct page_info *page)
 
 	struct page_info *buddy = pa2page(BUDDY_PA(page2pa(page), page->pp_order));
 	assert(buddy != NULL);
-	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order) {
+	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order
+	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	    || buddy->pp_cached
+	#endif
+	    ) {
 		list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return page;
 	}
@@ -240,15 +342,27 @@ struct page_info *buddy_find(size_t req_order)
 struct page_info *page_alloc(int alloc_flags)
 {
 	int order = BUDDY_4K_PAGE;
+	struct page_info *page;
 	
 	if (alloc_flags & ALLOC_HUGE) {
 		order = BUDDY_2M_PAGE;
 	}
 
+	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	if (page_cache_enabled && order == BUDDY_4K_PAGE) {
+		page = page_cache_pop();
+		if (page == NULL && page_cache_refill() == 0) page = page_cache_pop();
+		if (page != NULL) goto allocated;
+	}
+	#endif
+
 	fine_spin_lock(&buddy_lock);
-	struct page_info *page = buddy_find(order);
+	page = buddy_find(order);
 	fine_spin_unlock(&buddy_lock);
-	
+
+	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+allocated:
+	#endif
 	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
 	if(page != NULL){
 		long *va = page2kva(page);
@@ -334,6 +448,14 @@ struct page_info *page_zero_pending(void)
 void page_zero_complete(struct page_info *pp)
 {
 	memset(page2kva(pp), 0, PAGE_SIZE);
+	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	if (page_cache_enabled) {
+		pp->pp_free = 1;
+		pp->pp_zero = 0;
+		page_cache_push(pp);
+		return;
+	}
+	#endif
 	page_free_immediate(pp);
 }
 
