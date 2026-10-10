@@ -8,6 +8,7 @@ In kthread_create() is where the kernel tasks are created with its kernel stack.
 
 ## Core Pinning (Affinity)
 
+Core affinity is determined by a bitmask in `task_affinity`, where n in it represents the N'th CPU. Fork copies the parents affinity. The scheduler checks affinity before running the task. Tasks that cannot run on the current CPU are returned to the global queue for an eligible CPU to run on. We move the task to another allowed CPU, if the new set-up affinity does not allow to run on the current one.
 
 ## Core Hotplugging
 ##### MACRO = BONUS_CORE_HOTPLUGGING
@@ -16,7 +17,7 @@ Cores can be powered off and on manually with sys_core_disable(num) and sys_core
 
 The load balancer, disables a core, other than the boot CPU, once it has been idle for 10 ms. When a new task gets in the global run queue, a sleeping core is started. Also taking account of the affinity if that was set-up for the specific task, so a task pinned to a core is not disabled by the load balancer. A core disabled with sys_core_disable() stays off until sys_core_enable() is called.
 
-The core hotplugging has been thus bulid to take task affinity into account.
+The core hotplugging has been thus bulid to take task affinity into account. And a 
 
 
 ## Efficient Multi-Core Frame Allocator
