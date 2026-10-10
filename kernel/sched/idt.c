@@ -183,7 +183,7 @@ void idt_init(void)
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 	set_idt_entry(&entries[IRQ_TIMER], isr32,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
-#ifdef BONUS_CORE_HOTPLUGGING
+#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 	set_idt_entry(&entries[IRQ_WAKEUP], isr240,
 		IDT_INT_GATE32 | IDT_PRESENT, GDT_KCODE);
 #endif
@@ -218,7 +218,7 @@ void int_dispatch(struct int_frame *frame)
 			page_fault_handler(frame);
 			return;
 		case IRQ_TIMER:
-	#ifdef BONUS_CORE_HOTPLUGGING
+	#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 		case IRQ_WAKEUP:
 	#endif
 			lapic_eoi();

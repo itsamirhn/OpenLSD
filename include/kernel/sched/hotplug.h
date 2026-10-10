@@ -4,7 +4,7 @@
 #include <task.h>
 #include <cpu.h>
 
-#ifdef BONUS_CORE_HOTPLUGGING
+#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 int sys_core_enable(int num);
 int sys_core_disable(int num);
 

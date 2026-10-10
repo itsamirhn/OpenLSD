@@ -183,7 +183,7 @@ void mem_init_mp(void)
 	 */
 	for (uint32_t i = 0; i < ncpus; i++) {
 		struct cpuinfo *cpu = cpus + i;
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 		list_init(&cpu->cpu_page_cache);
 		cpu->cpu_page_cache_count = 0;
 #endif
@@ -198,7 +198,7 @@ void mem_init_mp(void)
 		}
 	}
 
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	page_cache_enable();
 #endif
 }

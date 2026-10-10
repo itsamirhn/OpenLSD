@@ -9,7 +9,7 @@
 #include <kernel/sched.h>
 #include <kernel/sched/hotplug.h>
 
-#ifdef BONUS_CORE_HOTPLUGGING
+#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 
 #ifdef USE_BIG_KERNEL_LOCK
 extern struct spinlock kernel_lock;

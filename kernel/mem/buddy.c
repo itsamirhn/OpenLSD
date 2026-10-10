@@ -19,7 +19,7 @@ struct page_info *pages;
  */
 struct list buddy_free_list[BUDDY_MAX_ORDER];
 static bool zero_pending_enabled;
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 static bool page_cache_enabled;
 
 #define PAGE_CACHE_REFILL_ORDER 5
@@ -39,7 +39,7 @@ struct spinlock buddy_lock = {
 
 static struct page_info *buddy_merge(struct page_info *page);
 
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 static void page_cache_push(struct page_info *page)
 {
 	assert(page_cache_enabled);
@@ -197,7 +197,7 @@ size_t count_total_free_pages(void)
 	}
 	fine_spin_unlock(&buddy_lock);
 
-	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	if (page_cache_enabled) {
 		for (size_t i = 0; i < ncpus; ++i) nfree += cpus[i].cpu_page_cache_count;
 	}
@@ -349,7 +349,7 @@ struct page_info *page_alloc(int alloc_flags)
 		order = BUDDY_2M_PAGE;
 	}
 
-	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	if (page_cache_enabled && order == BUDDY_4K_PAGE) {
 		page = page_cache_pop();
 		if (page == NULL && page_cache_refill() == 0) page = page_cache_pop();
@@ -361,7 +361,7 @@ struct page_info *page_alloc(int alloc_flags)
 	page = buddy_find(order);
 	fine_spin_unlock(&buddy_lock);
 
-	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 allocated:
 	#endif
 	#if defined(BONUS_USE_AFTER_FREE) || defined(BONUS_OUT_OF_BOUNDS)
@@ -449,7 +449,7 @@ struct page_info *page_zero_pending(void)
 void page_zero_complete(struct page_info *pp)
 {
 	memset(page2kva(pp), 0, PAGE_SIZE);
-	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	if (page_cache_enabled) {
 		pp->pp_zero = 0;
 		page_cache_push(pp);
@@ -566,7 +566,7 @@ int buddy_grow(struct page_table *pml4, size_t size)
 	return 0;
 }
 
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 #include <kernel/sched.h>
 
 static void frame_cache_thread(void *arg)

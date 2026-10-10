@@ -231,7 +231,7 @@ static int sys_sched_setaffinity(pid_t pid, unsigned cpusetsize, cpu_set_t *mask
 
 	set &= CPUS_MASK;
 	if (!set) return -EINVAL;
-#ifdef BONUS_CORE_HOTPLUGGING
+#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 	if (!(set & core_allowed_mask())) return -EINVAL; // Cannot set affinity to cores that were manually disabled
 #endif
 
@@ -313,7 +313,7 @@ int64_t syscall(uint64_t syscallno, uint64_t a1, uint64_t a2, uint64_t a3,
 			return sys_sched_setaffinity((pid_t)a1, (unsigned)a2, (cpu_set_t *)a3);
 		case SYS_sched_getaffinity:
 			return sys_sched_getaffinity((pid_t)a1, (unsigned)a2, (cpu_set_t *)a3);
-	#ifdef BONUS_CORE_HOTPLUGGING
+	#if defined(BONUS_CORE_HOTPLUGGING) || defined(BONUS_LAB6)
 		case SYS_core_enable:
 			return sys_core_enable((int)a1);
 		case SYS_core_disable:

@@ -61,7 +61,7 @@ struct cpuinfo {
 	/* Per-CPU list of pending zeroed pages */
 	struct list cpu_zero_pending;
 
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	/* Per-CPU cache of 4k pages. */
 	struct list cpu_page_cache;
 	size_t cpu_page_cache_count;
