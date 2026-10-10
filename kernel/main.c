@@ -117,6 +117,9 @@ void kmain(struct boot_info *boot_info)
 	task_create(binary, TASK_TYPE_USER);
 	page_zero_enable();
 	zero_page_thread_init();
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	frame_cache_thread_init();
+#endif
 
 	sched_yield();
 }

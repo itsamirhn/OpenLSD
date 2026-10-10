@@ -183,6 +183,10 @@ void mem_init_mp(void)
 	 */
 	for (uint32_t i = 0; i < ncpus; i++) {
 		struct cpuinfo *cpu = cpus + i;
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+		list_init(&cpu->cpu_page_cache);
+		cpu->cpu_page_cache_count = 0;
+#endif
 		uint64_t stack_top = KSTACK_TOP - (KSTACK_SIZE + KSTACK_GAP) * i;
 		uint64_t stack_bottom = stack_top - KSTACK_SIZE;
 		cpu->cpu_tss.rsp[0] = stack_top;
@@ -193,6 +197,10 @@ void mem_init_mp(void)
 			assert(page_insert(kernel_pml4, page, (void *)va, PAGE_PRESENT | PAGE_WRITE | PAGE_NO_EXEC) == 0);
 		}
 	}
+
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+	page_cache_enable();
+#endif
 }
 
 /*

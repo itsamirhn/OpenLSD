@@ -443,3 +443,32 @@ int buddy_grow(struct page_table *pml4, size_t size)
 
 	return 0;
 }
+
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+#include <kernel/sched.h>
+
+static void frame_cache_thread(void *arg)
+{
+	for (;;) {
+		big_spin_lock(&kernel_lock);
+		page_cache_reclaim();
+		cur_task->task_status = TASK_NOT_RUNNABLE;
+		sched_yield();
+	}
+}
+
+void frame_cache_thread_wake(void)
+{
+	struct task *task = this_cpu->cpu_frame_task;
+
+	if (task && task->task_status == TASK_NOT_RUNNABLE) sched_enqueue(task);
+}
+
+void frame_cache_thread_init(void)
+{
+	if (ncpus < 2) return;
+
+	for (size_t i = 0; i < ncpus; i++)
+		cpus[i].cpu_frame_task = kthread_create(frame_cache_thread, NULL, 1ULL << i);
+}
+#endif

@@ -65,6 +65,12 @@ void page_zero_complete(struct page_info *pp);
 void page_zero_enable(void);
 void zero_page_thread_init(void);
 void zero_page_thread_wake(void);
+#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
+void frame_cache_thread_init(void);
+void frame_cache_thread_wake(void);
+void page_cache_enable(void);
+void page_cache_reclaim(void);
+#endif
 void buddy_migrate(void);
 int buddy_grow(struct page_table *pml4, size_t index);
 
