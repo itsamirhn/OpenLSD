@@ -47,11 +47,6 @@ struct page_info {
 	/* Whether the page represents actually available memory */
 	uint8_t pp_avail : 1;
 
-#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
-	/* Whether the page is held in a CPU-local allocator cache. */
-	uint8_t pp_cached;
-#endif
-
 	/* Reserved. */
 	uint64_t pp_zero;
 };

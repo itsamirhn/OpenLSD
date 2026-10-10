@@ -234,9 +234,6 @@ void page_init(struct boot_info *boot_info)
 			page->pp_order = 0;
 		#endif
 		page->pp_avail = 0;
-		#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
-		page->pp_cached = 0;
-		#endif
 	}
 
 	/* Go through the pages reserved for use by the buddy allocator itself,

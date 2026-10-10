@@ -44,10 +44,9 @@ static void page_cache_push(struct page_info *page)
 {
 	assert(page_cache_enabled);
 	assert(page->pp_order == BUDDY_4K_PAGE);
-	assert(page->pp_free);
-	assert(!page->pp_cached);
+	// Pages in the page_cache should not be marked free, so no other CPU can merge with them if it were the case
+	assert(!page->pp_free);
 
-	page->pp_cached = 1;
 	list_add_tail(&this_cpu->cpu_page_cache, &page->pp_node);
 	++this_cpu->cpu_page_cache_count;
 
@@ -61,10 +60,7 @@ static struct page_info *page_cache_pop(void)
 	if (list_is_empty(&this_cpu->cpu_page_cache)) return NULL;
 
 	page = container_of(list_pop(&this_cpu->cpu_page_cache), struct page_info, pp_node);
-	assert(page->pp_cached);
-	assert(page->pp_free);
-	page->pp_cached = 0;
-	page->pp_free = 0;
+	assert(!page->pp_free);
 	--this_cpu->cpu_page_cache_count;
 	return page;
 }
@@ -83,7 +79,6 @@ static int page_cache_refill(void)
 		struct page_info *page = block + i;
 
 		page->pp_order = BUDDY_4K_PAGE;
-		page->pp_free = 1;
 		page_cache_push(page);
 	}
 
@@ -267,11 +262,7 @@ struct page_info *buddy_merge(struct page_info *page)
 
 	struct page_info *buddy = pa2page(BUDDY_PA(page2pa(page), page->pp_order));
 	assert(buddy != NULL);
-	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order
-	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
-	    || buddy->pp_cached
-	#endif
-	    ) {
+	if (buddy->pp_free == 0 || buddy->pp_order != page->pp_order) {
 		list_add_tail(buddy_free_list + page->pp_order, &page->pp_node);
 		return page;
 	}
@@ -450,7 +441,6 @@ void page_zero_complete(struct page_info *pp)
 	memset(page2kva(pp), 0, PAGE_SIZE);
 	#ifdef BONUS_MULTI_CORE_FRAME_ALLOCATOR
 	if (page_cache_enabled) {
-		pp->pp_free = 1;
 		pp->pp_zero = 0;
 		page_cache_push(pp);
 		return;
