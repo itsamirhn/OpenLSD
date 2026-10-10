@@ -19,6 +19,16 @@ The load balancer, disables a core, other than the boot CPU, once it has been id
 The core hotplugging has been thus bulid to take task affinity into account.
 
 
+## Efficient Multi-Core Frame Allocator
+##### MACRO = BONUS_MULTI_CORE_FRAME_ALLOCATOR
+
+We have implemented per-CPU page cache (4k pages, `cpu_page_cache` in cpuinfo). If the cache is filled, allocating happens without taking locks. page_alloc() first pops a page from the local cache. If the cache is empty we take buddy_lock in `page_cache_refill`, to grab an order 5 block (32 pages) and put all of them in the cache. Huge pages do not use the cache.
+
+Freeing a 4K page also avoids locking. `page_zero_complete` pushes the page on the cache after it has been cleared,instead of handing it back to the buddy allocator. Cached pages keep pp_free == 0, the same as pages waiting to be zeroed, so `buddy_merge()` on another CPU never merges with a page that sits in someone else's cache.
+
+Kernel threads are used to reclaim pages, and it is woken up once the cache grows past `PAGE_CACHE_HIGH` (128 pages). It locks once and give pages back until only 32 pages are left, so one CPU cannot get all the memory, and thus it amkes it available to the others again. Because it uses affinity, it only touchs that CPU's lists, which is why those lists need no lock. With a single CPU the cache is disabled and the original allocator is used.
+
+
 
 ------------------------------------------------
 # LAB 5
