@@ -568,6 +568,7 @@ int buddy_grow(struct page_table *pml4, size_t size)
 
 #if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 #include <kernel/sched.h>
+extern struct spinlock kernel_lock;
 
 static void frame_cache_thread(void *arg)
 {
