@@ -1,0 +1,8 @@
+name: Frame Allocator - Cached Pages Are Not Merged (2 cores)
+description: A page cached on one CPU must not be merged with its buddy block when that buddy is given back to the page cache on another CPU.
+bonus: MULTI_CORE_FRAME_ALLOCATOR
+qemu: -smp 2
+
+regexlines:
+  - "page A is cached on CPU 1"
+  - "buddy B was not merged with page A cached on CPU 1"

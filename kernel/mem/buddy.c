@@ -572,6 +572,7 @@ int buddy_grow(struct page_table *pml4, size_t size)
 static void frame_cache_thread(void *arg)
 {
 	for (;;) {
+		asm volatile("cli" ::: "memory");
 		big_spin_lock(&kernel_lock);
 		page_cache_reclaim();
 		cur_task->task_status = TASK_NOT_RUNNABLE;
