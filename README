@@ -17,7 +17,7 @@ Cores can be powered off and on manually with sys_core_disable(num) and sys_core
 
 The load balancer, disables a core, other than the boot CPU, once it has been idle for 10 ms. When a new task gets in the global run queue, a sleeping core is started. Also taking account of the affinity if that was set-up for the specific task, so a task pinned to a core is not disabled by the load balancer. A core disabled with sys_core_disable() stays off until sys_core_enable() is called.
 
-The core hotplugging has been thus bulid to take task affinity into account. And a 
+The core hotplugging has been thus bulid to take task affinity into account.
 
 
 ## Efficient Multi-Core Frame Allocator
@@ -29,6 +29,7 @@ Freeing a 4K page also avoids locking. `page_zero_complete` pushes the page on t
 
 Kernel threads are used to reclaim pages, and it is woken up once the cache grows past `PAGE_CACHE_HIGH` (128 pages). It locks once and give pages back until only 32 pages are left, so one CPU cannot get all the memory, and thus it amkes it available to the others again. Because it uses affinity, it only touchs that CPU's lists, which is why those lists need no lock. With a single CPU the cache is disabled and the original allocator is used.
 
+We have ensured that all three parts can work together at the same time.
 
 
 ------------------------------------------------
