@@ -10,6 +10,7 @@
 #include <vdso.h>
 #endif
 
+#include <kernel/acpi.h>
 #include <kernel/monitor.h>
 #include <kernel/mem.h>
 #include <kernel/sched.h>

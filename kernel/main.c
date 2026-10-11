@@ -18,6 +18,7 @@
 #include <kernel/test/probe.h>
 #include <kernel/test/test.h>
 #include <kernel/symbols.h>
+#include <kernel/dev/pci.h>
 
 #ifdef USE_BIG_KERNEL_LOCK
 extern struct spinlock kernel_lock;
@@ -95,6 +96,8 @@ void kmain(struct boot_info *boot_info)
 	hpet_init(rsdp);
 	time_init();
 	mem_init_mp();
+
+	pci_init(rsdp);
 
 	/* Set up the tasks. */
 	task_init();
