@@ -1,0 +1,9 @@
+name: Core Hotplugging - Frame Cache Given Back (4 cores)
+description: A core that powers off gives its cached pages back to the buddy allocator, so other cores can use them.
+bonus: LAB6
+qemu: -smp 4
+
+regexlines:
+  - "Filled the page cache of CPU 2"
+  - "SMP: CPU 2 powered off"
+  - "CPU 2 gave its cached pages back before powering off"
