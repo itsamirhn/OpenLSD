@@ -49,7 +49,7 @@ static int populate_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 /* Populates the region [va, va + size) with pages by allocating pages from the
  * frame allocator and mapping them.
  */
-void populate_region(struct page_table *pml4, void *va, size_t size,
+int populate_region(struct page_table *pml4, void *va, size_t size,
 	uint64_t flags)
 {
 	struct populate_info info = {
@@ -67,5 +67,5 @@ void populate_region(struct page_table *pml4, void *va, size_t size,
 		.udata = &info,
 	};
 
-	walk_page_range(pml4, va, (void *)((uintptr_t)va + size), &walker);
+	return walk_page_range(pml4, va, (void *)((uintptr_t)va + size), &walker);
 }

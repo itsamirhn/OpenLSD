@@ -38,7 +38,8 @@ int do_populate_vma(struct task *task, void *base, size_t size,
 		page_flags |= PAGE_NO_EXEC;
 	}
 
-	populate_region(task->task_pml4, (void *)start, end - start, page_flags);
+	int ret = populate_region(task->task_pml4, (void *)start, end - start, page_flags);
+	if (ret < 0) return ret;
 
 	if ((*vma)->vm_src && (*vma)->vm_len) {
 		uintptr_t data_base = (uintptr_t)(*vma)->vm_base + (*vma)->vm_offset;
