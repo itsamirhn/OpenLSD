@@ -582,6 +582,22 @@ void task_destroy(struct task *task)
 	}
 }
 
+ // Kill task that might be running on other core
+void task_kill(struct task *task)
+{
+	fine_spin_lock(&task->task_lock);
+	task->task_killed = true;
+	fine_spin_unlock(&task->task_lock);
+	while (task != cur_task && (task->task_status == TASK_RUNNING || task->task_status == TASK_RUNNABLE)) {
+		if (sched_dequeue(task)) break;
+		big_spin_unlock(&kernel_lock);
+		asm volatile("pause" ::: "memory");
+		big_spin_lock(&kernel_lock);
+	}
+
+	task_destroy(task);
+}
+
 /*
  * Restores the register values in the trap frame with the iretq or sysretq
  * instruction. This exits the kernel and starts executing the code of some

@@ -13,6 +13,7 @@ void task_create(uint8_t *binary, enum task_type type);
 struct task *kthread_create(void (*entry)(void *), void *arg, uint64_t affinity);
 void task_free(struct task *task);
 void task_destroy(struct task *task);
+void task_kill(struct task *task);
 void task_pop_frame(struct int_frame *frame);
 int task_exec(uint8_t *binary);
 void task_run(struct task *task);
