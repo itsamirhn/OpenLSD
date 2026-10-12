@@ -12,13 +12,10 @@ extern struct spinlock kernel_lock;
 #endif
 
 static void zero_page_thread(void *arg){
-	struct page_info *page;
-
 	for (;;) {
 		asm volatile("cli" ::: "memory");
 		big_spin_lock(&kernel_lock);
-		while ((page = page_zero_pending()) != NULL)
-			page_zero_complete(page);
+		page_zero_flush();
 		// Sleep until page_free() queues a new page on this CPU
 		cur_task->task_status = TASK_NOT_RUNNABLE;
 		sched_yield();

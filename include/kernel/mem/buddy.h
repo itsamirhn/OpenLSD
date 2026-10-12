@@ -62,6 +62,7 @@ void page_free(struct page_info *pp);
 void page_decref(struct page_info *pp);
 struct page_info *page_zero_pending(void);
 void page_zero_complete(struct page_info *pp);
+void page_zero_flush(void);
 void page_zero_enable(void);
 void zero_page_thread_init(void);
 void zero_page_thread_wake(void);

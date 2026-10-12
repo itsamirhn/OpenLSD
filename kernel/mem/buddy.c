@@ -459,6 +459,15 @@ void page_zero_complete(struct page_info *pp)
 	page_free_immediate(pp);
 }
 
+/* Zeroes this CPU's pending pages right away, so they can be allocated again. */
+void page_zero_flush(void)
+{
+	struct page_info *page;
+
+	while ((page = page_zero_pending()) != NULL)
+		page_zero_complete(page);
+}
+
 void page_zero_enable(void)
 {
 	zero_pending_enabled = true;
