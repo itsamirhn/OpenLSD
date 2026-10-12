@@ -69,7 +69,7 @@ bool oom_kill(void)
 	}
 
 	if (victim) {
-		cprintf("[PID %5u] Out of memory: killing task %u with an RSS of %u KiB\n", cur_task ? cur_task->task_pid : 0, victim->task_pid, victim_rss * PAGE_SIZE);
+		cprintf("[PID %5u] Out of memory: killing task %u with an RSS of %u KiB\n", cur_task ? cur_task->task_pid : 0, victim->task_pid, victim_rss * 4);
 		if (victim == cur_task) spin_unlock(&oom_lock);
 		task_kill(victim);
 		// flush what we freed

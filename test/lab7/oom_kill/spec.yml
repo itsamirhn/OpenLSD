@@ -1,0 +1,18 @@
+name: OOM Kill
+description: The OOM killer kills the task with the largest RSS.
+timeout: 180
+
+regexlines:
+  - '^.PID     2. Out of memory: killing task 1 with an RSS of 65548 KiB$'
+
+matchlines:
+  - 'OOM kill test successful.'
+
+noregexlines:
+  - 'Out of memory: killing task 2'
+  - 'The parent survived!'
+
+---
+
+name: (2 cores)
+qemu: -smp 2
