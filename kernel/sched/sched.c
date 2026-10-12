@@ -129,7 +129,6 @@ static void sched_balance(void) {
  // does not return
 static void sched_power_off(void){
 	struct cpuinfo *cpu = this_cpu;
-	struct page_info *page;
 	struct task *task;
 
 	if (cur_task && cur_task->task_status == TASK_RUNNING) {
@@ -147,8 +146,7 @@ static void sched_power_off(void){
 	}
 
 	// Nobody zeroes this CPU's pending pages while it is off
-	while ((page = page_zero_pending()) != NULL)
-		page_zero_complete(page);
+	page_zero_flush();
 
 #if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
 	page_cache_flush();
