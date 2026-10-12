@@ -8,6 +8,7 @@
 #include <kernel/mem/kmem.h>
 #include <kernel/mem/lookup.h>
 #include <kernel/mem/map.h>
+#include <kernel/mem/oom.h>
 #include <kernel/mem/populate.h>
 #include <kernel/mem/protect.h>
 #include <kernel/mem/ptbl.h>

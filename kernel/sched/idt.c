@@ -1,5 +1,6 @@
 
 #include <assert.h>
+#include <error.h>
 #include <stdio.h>
 
 #include <x86-64/asm.h>
@@ -11,6 +12,7 @@
 #include <kernel/monitor.h>
 #include <kernel/sched/syscall.h>
 
+#include <kernel/mem/oom.h>
 #include <kernel/sched/task.h>
 #include <kernel/vma/pfault.h>
 
@@ -300,9 +302,11 @@ void page_fault_handler(struct int_frame *frame)
 	/* Read the CR2 register to find the faulting address. */
 	fault_va = (void *)read_cr2();
 
+	// OOM kill until we do not get -ENOMEM
+	while ((ret = task_page_fault_handler(cur_task, fault_va, frame->err_code)) == -ENOMEM && oom_kill());
+
 	/* Handle kernel-mode page faults. */
 	if ((frame->cs & 3) == 0) {
-		ret =  task_page_fault_handler(cur_task, fault_va, frame->err_code);
 		if (ret < 0){
 			cprintf("Kernel page fault at va %p ip %p\n", fault_va, frame->rip);
 			print_int_frame(frame);
@@ -316,7 +320,6 @@ void page_fault_handler(struct int_frame *frame)
 	 * page fault has happened in user mode.
 	 */
 
-	ret = task_page_fault_handler(cur_task, fault_va, frame->err_code);
 	if (ret < 0) {
 		cprintf("[PID %5u] user fault va %p ip %p\n",
 			cur_task->task_pid, fault_va, frame->rip);
