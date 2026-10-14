@@ -5,8 +5,9 @@
 
 
 #define RANK_OOM      (1ULL << 1)
-#define RANK_SCHED    (1ULL << 2)
-#define RANK_BUDDY    (1ULL << 3)
+#define RANK_SWAP     (1ULL << 2)
+#define RANK_SCHED    (1ULL << 3)
+#define RANK_BUDDY    (1ULL << 4)
 #define RANK_CONSOLE  (1ULL << 32)
 
 

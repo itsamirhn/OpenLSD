@@ -136,6 +136,7 @@ int madvise(void *addr, size_t len, int advise);
 
 #define MADV_WILLNEED 1
 #define MADV_DONTNEED 2
+#define MADV_SWAP     3
 
 
 void sched_yield(void);
