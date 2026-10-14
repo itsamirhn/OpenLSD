@@ -21,6 +21,7 @@ enum {
 	TASK_RUNNING,
 	TASK_NOT_RUNNABLE,
 	TASK_SLEEPING,
+	TASK_SWAPPING, // Waiting to be served by swapd
 };
 
 /* The method of interrupt used to switch to the kernel. */
@@ -96,6 +97,9 @@ struct task {
 
 	/* The anchor node (for zombies) */
 	struct list task_node;
+
+	/* Address that swapd should work on*/
+	void *task_swap_va, *task_swap_end;
 
 	/* Where to store the exit status of the task we are waiting on. */
 	int *task_rstatus;

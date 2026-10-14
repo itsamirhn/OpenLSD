@@ -33,5 +33,9 @@ static inline size_t swap_slot(physaddr_t entry)
 
 void swap_init(void);
 bool swap_enabled(void);
+bool page_swapped(struct task *task, void *va);
+void swap_wait(void *va, bool in_syscall);
+void swap_out_range(void *va, size_t len);
+void swap_cancel(struct task *task);
 int swap_share(struct page_table *pml4, uintptr_t va, physaddr_t entry);
 void swap_free(physaddr_t entry);

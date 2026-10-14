@@ -191,7 +191,7 @@ int sys_madvise(void *addr, size_t len, int advise)
 	uintptr_t start;
 	uintptr_t end;
 
-	if (!len || (advise != MADV_WILLNEED && advise != MADV_DONTNEED)) {
+	if (!len || (advise != MADV_WILLNEED && advise != MADV_DONTNEED && advise != MADV_SWAP)) {
 		return -EINVAL;
 	}
 	if ((uintptr_t)addr >= USER_LIM || (uintptr_t)addr + len < (uintptr_t)addr) { // Check for overflow
@@ -206,11 +206,15 @@ int sys_madvise(void *addr, size_t len, int advise)
 		int ret = 0;
 		for (uintptr_t p = start; p < end; p += PAGE_SIZE) if (page_lookup(cur_task->task_pml4, (void *)p, NULL) == NULL) {
 			ret = task_page_fault_handler(cur_task, (void *)p, 0);
+			if (ret == -EAGAIN) swap_wait((void *)p, true);
 			if (ret < 0) return ret;
 		}
 		return 0;
 	}else if (advise == MADV_DONTNEED) {
 		return unmap_clean_pages_range(cur_task, (void *)start, end - start);
+	}else if (advise == MADV_SWAP) {
+		if (!swap_enabled()) return -ENOSYS;
+		swap_out_range((void *)start, end - start);
 	}
 	return -EINVAL;
 }
