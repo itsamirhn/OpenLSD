@@ -17,39 +17,39 @@ static struct spinlock oom_lock = {
 #endif
 };
 
-static int rss_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
+static int footprint_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	if (*entry & PAGE_PRESENT) *(size_t *)walker->udata += 1;
+	if ((*entry & PAGE_PRESENT) || pte_swapped(*entry)) *(size_t *)walker->udata += 1;
 	return 0;
 }
 
-static int rss_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
+static int footprint_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
 	if ((*entry & PAGE_PRESENT) && (*entry & PAGE_HUGE)) *(size_t *)walker->udata += HPAGE_SIZE / PAGE_SIZE;
 	return 0;
 }
 
-// The resident set size of a task in pages.
-size_t task_rss(struct task *task)
+// RSS + swap pages of a task
+size_t task_footprint(struct task *task)
 {
-	size_t rss = 0;
+	size_t pages = 0;
 	struct page_walker walker = {
-		.pte_callback = rss_pte,
-		.pde_callback = rss_pde,
-		.udata = &rss,
+		.pte_callback = footprint_pte,
+		.pde_callback = footprint_pde,
+		.udata = &pages,
 	};
 
 	walk_user_pages(task->task_pml4, &walker);
-	return rss;
+	return pages;
 }
 
-// Kills the user task with the largest RSS
+// Kills the user task with the largest footprint
 bool oom_kill(void)
 {
 	struct task *task, *victim = NULL;
-	size_t rss, victim_rss = 0;
+	size_t pages, victim_pages = 0;
 	pid_t pid;
 
 	// We've got killed in the meanwhile by other core, so yield
@@ -61,15 +61,15 @@ bool oom_kill(void)
 		task = tasks[pid];
 		if (!task || task->task_type != TASK_TYPE_USER || task->task_killed || task->task_status == TASK_DYING) continue; // let kernel tasks live
 
-		rss = task_rss(task);
-		if (rss > victim_rss) { // find max rss
+		pages = task_footprint(task);
+		if (pages > victim_pages) { // find max footprint
 			victim = task;
-			victim_rss = rss;
+			victim_pages = pages;
 		}
 	}
 
 	if (victim) {
-		cprintf("[PID %5u] Out of memory: killing task %u with an RSS of %u KiB\n", cur_task ? cur_task->task_pid : 0, victim->task_pid, victim_rss * 4);
+		cprintf("[PID %5u] Out of memory: killing task %u using %u KiB\n", cur_task ? cur_task->task_pid : 0, victim->task_pid, victim_pages * 4);
 		if (victim == cur_task) spin_unlock(&oom_lock);
 		task_kill(victim);
 		// flush what we freed
