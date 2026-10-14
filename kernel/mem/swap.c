@@ -14,12 +14,15 @@
 
 #define SWAP_MAGIC "SWAP"
 #define SWAP_MAX_SLOTS (128 * 1024 * 1024 / PAGE_SIZE)
+#define SWAP_BATCH 64
 
 #define SYSCALL_INSN_SIZE 2
 
 #ifdef USE_BIG_KERNEL_LOCK
 extern struct spinlock kernel_lock;
 #endif
+extern pid_t pid_max;
+extern struct task **tasks;
 
 #ifndef USE_BIG_KERNEL_LOCK
 static struct spinlock swap_lock = {
@@ -36,6 +39,12 @@ static size_t sectors_per_page;
 static uint16_t swap_map[SWAP_MAX_SLOTS];
 static size_t nslots, swap_cursor;
 
+// The CLOCK hand, sweeping over the pages of all tasks
+static struct {
+	pid_t pid;
+	uintptr_t va;
+} hand;
+
 // Tasks waiting on swapd, linked through task_node
 static struct list swap_waiters = LIST_INIT(swap_waiters);
 static struct task *swapd_task;
@@ -50,8 +59,11 @@ static struct {
 	struct task *task;
 } io;
 
-// No frame to page in to, so OOM kill once swap_lock is released
+// Nothing left to evict, so OOM kill once swap_lock is released
 static bool swapd_oom;
+
+// Pages evicted so far for the task at the head that needs memory
+static size_t swapd_batch;
 
 // Issue command and poll disk
 static int swap_rw(void)
@@ -229,22 +241,37 @@ static void swap_wake(struct task *task)
 
 struct clock {
 	struct task *task;
+	bool force; // Evict without a second chance, for MADV_SWAP
 	size_t slot;
 	// Next in this eviction walk
 	uintptr_t next;
 };
+
+static bool clock_referenced(physaddr_t *entry, uintptr_t base, struct clock *clock)
+{
+	if (!(*entry & PAGE_ACCESSED)) return false;
+	*entry &= ~PAGE_ACCESSED; // second chance
+	return true;
+}
+
+// Keep the page where rstatus is returned in
+static bool clock_pinned(uintptr_t base, struct clock *clock)
+{
+	struct task *task = clock->task;
+
+	return task->task_status == TASK_NOT_RUNNABLE && task->task_rstatus && ROUNDDOWN((uintptr_t)task->task_rstatus, PAGE_SIZE) == base;
+}
 
 static int swap_page_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker)
 {
 	struct clock *clock = walker->udata;
 	struct page_info *page;
 
-	if (!(*entry & PAGE_PRESENT)) return 0;
+	if (!(*entry & PAGE_PRESENT) || (!clock->force && clock_referenced(entry, base, clock)) || clock_pinned(base, clock)) return 0;
+	page = pa2page(PAGE_ADDR(*entry));
+	if (page->pp_ref > 1) return 0; // do not swap CoW pages for now. With reverse mappings could be done.
 	if (!(clock->slot = slot_alloc())) return -ENOMEM;
 
-
-	page = pa2page(PAGE_ADDR(*entry));
-	if(page->pp_ref > 1) return 0; // do not swap CoW pages for now. With reverse mappings could be done.
 	memcpy(page2kva(bounce), page2kva(page), PAGE_SIZE);
 
 	*entry = swap_pte(clock->slot, *entry);
@@ -272,6 +299,49 @@ static int swap_page_walk(struct clock *clock, uintptr_t base, uintptr_t end)
 	return ret;
 }
 
+static bool clock_blocked(struct task *task)
+{
+	return task->task_type == TASK_TYPE_USER && !task->task_killed && (task->task_status == TASK_SWAPPING || task->task_status == TASK_NOT_RUNNABLE);
+}
+
+static bool clock_lock(struct task *task, bool *busy)
+{
+	if (!task || !clock_blocked(task)) return false;
+	if (!fine_spin_trylock(&task->task_lock)) {
+		*busy = true;
+		return false;
+	}
+	if (clock_blocked(task)) return true;
+
+	fine_spin_unlock(&task->task_lock);
+	return false;
+}
+
+// Pick a page using CLOCK, returns the slot to write it to or 0 if none is left
+static size_t clock_evict(bool *busy)
+{
+	struct clock clock = { 0 };
+	size_t visits;
+
+	for (visits = 0; visits <= 2 * (size_t)pid_max; ++visits) {
+		clock.task = tasks[hand.pid];
+		if (clock_lock(clock.task, busy)) {
+			int ret = swap_page_walk(&clock, hand.va, USER_LIM);
+
+			fine_spin_unlock(&clock.task->task_lock);
+			if (ret < 0) {
+				hand.va = clock.next;
+				break;
+			}
+		}
+
+		hand.pid = hand.pid % (pid_max - 1) + 1;
+		hand.va = 0;
+	}
+
+	return clock.slot;
+}
+
 static void swapd_write(size_t slot)
 {
 	io.op = IO_WRITE;
@@ -289,10 +359,21 @@ static void swapd_read(struct page_info *page, size_t slot, struct task *task)
 	swap_rw();
 }
 
+static bool swapd_reclaim(void)
+{
+	bool busy = false;
+	size_t slot = clock_evict(&busy);
+
+	if (slot) swapd_write(slot);
+	else if (!busy) swapd_oom = true;
+
+	return slot != 0;
+}
+
 // Swap out the next page of the MADV_SWAP range
 static void swapd_swap_out(struct task *task)
 {
-	struct clock clock = { .task = task };
+	struct clock clock = { .task = task, .force = true };
 	uintptr_t va = (uintptr_t)task->task_swap_va;
 	int ret = swap_page_walk(&clock, va, (uintptr_t)task->task_swap_end);
 
@@ -353,12 +434,14 @@ static void swapd_serve(void)
 
 	// The page is no longer in swap, so the task can just retry
 	if (!(entry = swap_lookup(task, task->task_swap_va))) {
+		if (++swapd_batch < SWAP_BATCH && swapd_reclaim()) return; // work in batches
+		swapd_batch = 0;
 		swap_wake(task);
 		return;
 	}
 
 	if (!(page = page_alloc(0))) {
-		swapd_oom = true;
+		swapd_reclaim();
 		return;
 	}
 
