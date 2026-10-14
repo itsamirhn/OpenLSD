@@ -480,6 +480,9 @@ void task_free(struct task *task)
 {
 	struct task *waiting;
 
+	// Stop any swaping operations that might be ongoing on the task
+	swap_cancel(task);
+
 	// Leaving the parent's lists below needs the parent's lock
 	if (!list_is_empty(&task->task_child)) assert(fine_spin_haslock(&pid2task(task->task_ppid, 0)->task_lock));
 
@@ -539,6 +542,7 @@ void task_destroy(struct task *task)
 	#ifdef BONUS_SLEEP_TIME
 	if (task->task_status == TASK_SLEEPING) sched_kick_from_bed(task);
 	#endif
+	swap_cancel(task);
 
 	// Lock the task, then try its parent
 	while (true) {

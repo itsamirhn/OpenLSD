@@ -13,6 +13,7 @@
 #include <kernel/sched/syscall.h>
 
 #include <kernel/mem/oom.h>
+#include <kernel/mem/swap.h>
 #include <kernel/sched/task.h>
 #include <kernel/vma/pfault.h>
 
@@ -304,6 +305,9 @@ void page_fault_handler(struct int_frame *frame)
 
 	// OOM kill until we do not get -ENOMEM
 	while ((ret = task_page_fault_handler(cur_task, fault_va, frame->err_code)) == -ENOMEM && oom_kill());
+
+	// The page is in swap, so wait until swapd paged it in, and retry
+	if (ret == -EAGAIN) swap_wait(fault_va, (frame->cs & 3) == 0);
 
 	/* Handle kernel-mode page faults. */
 	if ((frame->cs & 3) == 0) {
