@@ -164,7 +164,8 @@ void sys_munmap(void *addr, size_t len)
 	if (start >= USER_LIM || end > USER_LIM) {
 		return;
 	}
-	unmap_and_remove_vma_range(cur_task, (void *)start, end-start);
+	// Splitting a VMA can run out of memory, so retry once swapd made room
+	if (unmap_and_remove_vma_range(cur_task, (void *)start, end-start) == -ENOMEM && swap_enabled()) swap_wait(NULL, true);
 }
 
 int sys_mprotect(void *addr, size_t len, int prot)
@@ -183,7 +184,10 @@ int sys_mprotect(void *addr, size_t len, int prot)
 	if (end <= start || end > USER_LIM) { // Check for overflow
 		return -EINVAL;
 	}
-	return protect_vma_range(cur_task, (void *)start, end - start, prot);
+	int ret = protect_vma_range(cur_task, (void *)start, end - start, prot);
+
+	if (ret == -ENOMEM && swap_enabled()) swap_wait(NULL, true);
+	return ret;
 }
 
 int sys_madvise(void *addr, size_t len, int advise)
@@ -206,7 +210,7 @@ int sys_madvise(void *addr, size_t len, int advise)
 		int ret = 0;
 		for (uintptr_t p = start; p < end; p += PAGE_SIZE) if (page_lookup(cur_task->task_pml4, (void *)p, NULL) == NULL) {
 			ret = task_page_fault_handler(cur_task, (void *)p, 0);
-			if (ret == -EAGAIN) swap_wait((void *)p, true);
+			if ((ret == -EAGAIN || ret == -ENOMEM) && swap_enabled()) swap_wait((void *)p, true);
 			if (ret < 0) return ret;
 		}
 		return 0;

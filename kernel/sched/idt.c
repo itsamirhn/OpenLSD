@@ -303,11 +303,11 @@ void page_fault_handler(struct int_frame *frame)
 	/* Read the CR2 register to find the faulting address. */
 	fault_va = (void *)read_cr2();
 
-	// OOM kill until we do not get -ENOMEM
-	while ((ret = task_page_fault_handler(cur_task, fault_va, frame->err_code)) == -ENOMEM && oom_kill());
+	//OOM kill until we do not get -ENOMEM, if swap is disabled
+	while ((ret = task_page_fault_handler(cur_task, fault_va, frame->err_code)) == -ENOMEM && !swap_enabled() && oom_kill());
 
-	// The page is in swap, so wait until swapd paged it in, and retry
-	if (ret == -EAGAIN) swap_wait(fault_va, (frame->cs & 3) == 0);
+	// wait until swapd paged it in or made room, and retry
+	if (ret == -EAGAIN || (ret == -ENOMEM && swap_enabled())) swap_wait(fault_va, (frame->cs & 3) == 0);
 
 	/* Handle kernel-mode page faults. */
 	if ((frame->cs & 3) == 0) {

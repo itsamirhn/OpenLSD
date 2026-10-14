@@ -79,6 +79,8 @@ struct task *task_clone(struct task *task)
 pid_t sys_fork(void)
 {
 	struct task *task = task_clone(cur_task);
+
+	if (!task && swap_enabled()) swap_wait(NULL, true); 	// Retry once swapd made room
 	if (!task) return -ENOMEM;
 
 	task->task_frame.rax = 0;

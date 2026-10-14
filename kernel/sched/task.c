@@ -187,6 +187,9 @@ static struct task *task_alloc_type(pid_t ppid, enum task_type type)
 		return NULL;
 	}
 
+	// Clock would scan the PID map, so a half-initialized task reads as dying
+	memset(task, 0, sizeof *task);
+
 	/* Set up the virtual address space for the task. */
 	if (task_setup_vas(task) < 0) {
 		kfree(task);
