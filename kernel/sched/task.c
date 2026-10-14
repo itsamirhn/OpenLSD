@@ -657,6 +657,25 @@ void task_run(struct task *task)
 	task_pop_frame(&cur_task->task_frame);
 }
 
+// Page fault on addr, so we get the page back
+static void touch_user_mem(void *va, size_t size, bool write)
+{
+	uintptr_t page;
+	volatile char *p;
+
+	#ifdef BONUS_SMEP_SMAP
+	stac();
+	#endif
+	for (page = ROUNDDOWN((uintptr_t)va, PAGE_SIZE); page < (uintptr_t)va + size; page += PAGE_SIZE) {
+		p = (char *)MAX(page, (uintptr_t)va);
+		if (write) asm volatile("lock orb $0, %0" : "+m" (*p)); // atomic or, so we get a write page fault
+		else (void)*p;
+	}
+	#ifdef BONUS_SMEP_SMAP
+	clac();
+	#endif
+}
+
 /*
  * Checks that the task is allowed to access the range of memory
  * [va, va + size). If it can, then the function simply returns.
@@ -682,4 +701,6 @@ void assert_user_mem(struct task *task, void *va, size_t size, int flags)
 			task->task_pid, fault_va);
 		task_destroy(task);
 	}
+
+	if (task == cur_task) touch_user_mem(va, size, flags & PROT_WRITE);
 }
