@@ -1,5 +1,6 @@
 
 #include <types.h>
+#include <error.h>
 
 #include <kernel/mem.h>
 #include <kernel/vma.h>
@@ -19,9 +20,7 @@ int do_protect_vma(struct task *task, void *base, size_t size, struct vma **vma,
 	uintptr_t end = start + size;
 	int flags = *(int *)udata;
 
-	if (base > current->vm_base && target == current){
-		return -1; //split_vmas failed
-	} 
+	if (base > current->vm_base && target == current) return -ENOMEM;
 
 	target->vm_flags = flags;
 	protect_region(task->task_pml4, target->vm_base,target->vm_end - target->vm_base,

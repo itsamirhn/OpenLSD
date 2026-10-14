@@ -1,4 +1,5 @@
 
+#include <error.h>
 #include <task.h>
 #include <vma.h>
 #include <list.h>
@@ -90,9 +91,7 @@ static int remove_vma_callback(struct task *task, void *base, size_t size, struc
 	}
 
 	target = split_vmas(task, current, (void *)start, end - start);
-	if (base > current->vm_base && target == current){
-		return -1; //split_vmas failed
-	} 
+	if (base > current->vm_base && target == current) return -ENOMEM;
 
 	unmap_page_range(task->task_pml4, (void *)start, end - start);
 	next_node = list_next(&task->task_mmap, &target->vm_mmap);
