@@ -95,7 +95,7 @@ struct task {
 	/* The zombies */
 	struct list task_zombies;
 
-	/* The anchor node (for zombies) */
+	/* The anchor node (for zombies, or waitng for swap) */
 	struct list task_node;
 
 	/* Address that swapd should work on*/

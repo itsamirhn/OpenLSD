@@ -4,8 +4,6 @@
 #include <paging.h>
 #include <task.h>
 
-#define SWAP_FLAGS (PAGE_WRITE | PAGE_USER | PAGE_NO_EXEC | PAGE_DIRTY)
-
 static inline bool pte_swapped(physaddr_t entry)
 {
 	return !(entry & PAGE_PRESENT) && (entry & PAGE_SWAP);
@@ -19,7 +17,8 @@ static inline physaddr_t swap_pte(size_t slot, physaddr_t flags)
 #ifdef BONUS_L1TF_MDS
 	addr = PAGE_INVERT(addr);
 #endif
-	return addr | (flags & SWAP_FLAGS) | PAGE_SWAP;
+	// Keep the permissions and the dirty bit, but not the present bit
+	return addr | (flags & (PAGE_UMASK | PAGE_DIRTY) & ~PAGE_PRESENT) | PAGE_SWAP;
 }
 
 static inline size_t swap_slot(physaddr_t entry)
@@ -33,7 +32,7 @@ static inline size_t swap_slot(physaddr_t entry)
 
 void swap_init(void);
 bool swap_enabled(void);
-bool page_swapped(struct task *task, void *va);
+physaddr_t *swap_lookup(struct task *task, void *va);
 void swap_wait(void *va, bool in_syscall);
 void swap_out_range(void *va, size_t len);
 void swap_cancel(struct task *task);

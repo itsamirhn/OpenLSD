@@ -84,7 +84,7 @@ int task_page_fault_handler(struct task *task, void *va, int flags)
 
 	if ((vma->vm_flags & vma_flags) != vma_flags) return -EPERM;
 
-	if (!(flags & PF_PRESENT) && page_swapped(task, va)) return -EAGAIN;
+	if (!(flags & PF_PRESENT) && swap_lookup(task, va)) return -EAGAIN;
 
 	if ((flags & PF_PRESENT) && (flags & PF_WRITE)) return task_cow_fault(task, va);
 

@@ -15,20 +15,43 @@
 #define SWAP_MAGIC "SWAP"
 #define SWAP_MAX_SLOTS (128 * 1024 * 1024 / PAGE_SIZE)
 
+#define SYSCALL_INSN_SIZE 2
+
+#ifdef USE_BIG_KERNEL_LOCK
+extern struct spinlock kernel_lock;
+#endif
+
+#ifndef USE_BIG_KERNEL_LOCK
+static struct spinlock swap_lock = {
+	.rank = RANK_SWAP,
+#ifdef DEBUG_SPINLOCK
+	.name = "swap_lock",
+#endif
+};
+#endif
+
 static struct disk *swap_disk;
 static size_t sectors_per_page;
 
 static uint16_t swap_map[SWAP_MAX_SLOTS];
-static size_t nslots;
+static size_t nslots, swap_cursor;
+
+// Tasks waiting on swapd, linked through task_node
+static struct list swap_waiters = LIST_INIT(swap_waiters);
+static struct task *swapd_task;
 
 static struct page_info *bounce; // copy page
 
-// The disk state
+// The disk state, a read pages in task_swap_va of the task
 static struct {
 	enum { IO_NONE, IO_READ, IO_WRITE } op;
 	struct page_info *page;
 	size_t slot;
+	struct task *task;
 } io;
+
+// No frame to page in to, so OOM kill once swap_lock is released
+static bool swapd_oom;
 
 // Issue command and poll disk
 static int swap_rw(void)
@@ -42,6 +65,8 @@ static int swap_rw(void)
 	if (ret == -EAGAIN) return ret;
 	return ret == PAGE_SIZE ? 0 : -EFAULT;
 }
+
+static void swapd(void *arg);
 
 // Find swap disk
 void swap_init(void)
@@ -72,11 +97,26 @@ void swap_init(void)
 
 	nslots = MIN(stat.nsectors / sectors_per_page, SWAP_MAX_SLOTS);
 	cprintf("SWAP: %u MiB on disk %u\n", nslots * PAGE_SIZE / (1024 * 1024), i - 1);
+
+	// Boot cpu for now
+	swapd_task = kthread_create(swapd, NULL, 1ULL << (boot_cpu - cpus));
 }
 
 bool swap_enabled(void)
 {
 	return swap_disk != NULL;
+}
+
+// The next slot or 0 when swap is full
+static size_t slot_alloc(void)
+{
+
+	for (size_t i = 1; i < nslots; ++i) {
+		if (++swap_cursor >= nslots) swap_cursor = 1;
+		if (!swap_map[swap_cursor] && atomic_cmpxchg(&swap_map[swap_cursor], 0, 1)) return swap_cursor;
+	}
+
+	return 0;
 }
 
 void swap_free(physaddr_t entry)
@@ -107,4 +147,247 @@ int swap_share(struct page_table *pml4, uintptr_t va, physaddr_t entry)
 
 	if (ret == 0) atomic_inc(&swap_map[swap_slot(entry)]);
 	return ret;
+}
+
+static int find_swap_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
+    struct page_walker *walker)
+{
+	if (pte_swapped(*entry)) *(physaddr_t **)walker->udata = entry;
+	return 0;
+}
+
+// The swap entry of the page at va, or NULL if the page is not in swap
+physaddr_t *swap_lookup(struct task *task, void *va)
+{
+	void *base = (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
+	physaddr_t *entry = NULL;
+	struct page_walker walker = {
+		.pte_callback = find_swap_pte,
+		.udata = &entry,
+	};
+
+	walk_page_range(task->task_pml4, base, base + PAGE_SIZE, &walker);
+	return entry;
+}
+
+static void swapd_wake(void)
+{
+	if (swapd_task->task_status == TASK_NOT_RUNNABLE) sched_enqueue(swapd_task);
+}
+
+// Queue the current task on swapd and sleep until swapd served it, does not return
+static void swapd_queue_task(void *va, void *end)
+{
+	struct task *task = cur_task;
+
+	assert(task->task_type == TASK_TYPE_USER);
+
+	task->task_swap_va = va;
+	task->task_swap_end = end;
+	task->task_karma += read_tsc() - task->task_start_tsc;
+
+	// Leave the address space before swapd may change it
+	cur_task = NULL;
+	load_pml4(PADDR(kernel_pml4));
+
+	fine_spin_lock(&swap_lock);
+	task->task_status = TASK_SWAPPING;
+	list_add_tail(&swap_waiters, &task->task_node);
+	swapd_wake();
+	fine_spin_unlock(&swap_lock);
+
+	sched_yield();
+}
+
+void swap_wait(void *va, bool in_syscall)
+{
+	if (in_syscall) cur_task->task_frame.rip -= SYSCALL_INSN_SIZE; // put the current user stack in a loop, while we yield to somebody else
+	swapd_queue_task(va, NULL);
+}
+
+
+void swap_out_range(void *va, size_t len)
+{
+	cur_task->task_frame.rax = 0;
+	swapd_queue_task(va, va + len);
+}
+
+// The task goes away, so swapd should stop
+void swap_cancel(struct task *task)
+{
+	fine_spin_lock(&swap_lock);
+	if (task->task_status == TASK_SWAPPING) list_del(&task->task_node);
+	if (io.task == task) io.task = NULL;
+	fine_spin_unlock(&swap_lock);
+}
+
+static void swap_wake(struct task *task)
+{
+	list_del(&task->task_node);
+	sched_enqueue(task);
+}
+
+struct clock {
+	struct task *task;
+	size_t slot;
+	// Next in this eviction walk
+	uintptr_t next;
+};
+
+static int swap_page_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker)
+{
+	struct clock *clock = walker->udata;
+	struct page_info *page;
+
+	if (!(*entry & PAGE_PRESENT)) return 0;
+	if (!(clock->slot = slot_alloc())) return -ENOMEM;
+
+
+	page = pa2page(PAGE_ADDR(*entry));
+	if(page->pp_ref > 1) return 0; // do not swap CoW pages for now. With reverse mappings could be done.
+	memcpy(page2kva(bounce), page2kva(page), PAGE_SIZE);
+
+	*entry = swap_pte(clock->slot, *entry);
+	tlb_invalidate(clock->task->task_pml4, (void *)base);
+	page_decref(page);
+
+	clock->next = end + 1;
+	return -EAGAIN;
+}
+
+// Evict the first page in [base, end) to the bounce page, -EAGAIN once evicted, -ENOMEM when swap is full
+static int swap_page_walk(struct clock *clock, uintptr_t base, uintptr_t end)
+{
+	struct page_walker walker = {
+		.pte_callback = swap_page_pte,
+		.udata = clock,
+	};
+	int ret = walk_page_range(clock->task->task_pml4, (void *)base, (void *)end, &walker);
+
+	// Under pressure so release the pages we have freed till now
+	page_zero_flush();
+#if defined(BONUS_MULTI_CORE_FRAME_ALLOCATOR) || defined(BONUS_LAB6)
+	page_cache_flush();
+#endif
+	return ret;
+}
+
+static void swapd_write(size_t slot)
+{
+	io.op = IO_WRITE;
+	io.page = bounce;
+	io.slot = slot;
+	swap_rw();
+}
+
+static void swapd_read(struct page_info *page, size_t slot, struct task *task)
+{
+	io.op = IO_READ;
+	io.page = page;
+	io.slot = slot;
+	io.task = task;
+	swap_rw();
+}
+
+// Swap out the next page of the MADV_SWAP range
+static void swapd_swap_out(struct task *task)
+{
+	struct clock clock = { .task = task };
+	uintptr_t va = (uintptr_t)task->task_swap_va;
+	int ret = swap_page_walk(&clock, va, (uintptr_t)task->task_swap_end);
+
+	if (ret == -EAGAIN) {
+		// Take turns with the other tasks that need to be swapped
+		task->task_swap_va = (void *)MAX(clock.next, va);
+		list_del(&task->task_node);
+		list_add_tail(&swap_waiters, &task->task_node);
+		swapd_write(clock.slot);
+		return;
+	}
+
+	if (ret == -ENOMEM) task->task_frame.rax = -ENOMEM;
+	swap_wake(task);
+}
+
+// Finish the disk command, false while the disk is busy
+static bool swapd_poll(void)
+{
+	physaddr_t *entry;
+	int ret;
+
+	if (io.op == IO_NONE) return true;
+	if ((ret = swap_rw()) == -EAGAIN) return false;
+
+	if (ret < 0) panic("swap: cannot %s slot %u", io.op == IO_WRITE ? "write" : "read", io.slot);
+
+	if (io.op == IO_WRITE) {
+		// The page went to swap when it was copied to the bounce page
+	} else if (!io.task) { // Read, but the task went away in the meanwhile
+		page_free(io.page);
+	} else if (!(entry = swap_lookup(io.task, io.task->task_swap_va))) {
+		page_free(io.page);
+		sched_enqueue(io.task);
+	} else {
+		swap_free(*entry);
+		atomic_inc(&io.page->pp_ref);
+		*entry = page2pa(io.page) | (*entry & (PAGE_UMASK | PAGE_DIRTY)) | PAGE_PRESENT | PAGE_ACCESSED; // "Access" the page
+		sched_enqueue(io.task);
+	}
+
+	io.op = IO_NONE;
+	io.task = NULL;
+	return true;
+}
+
+//swap out a page of its range, or read a page back
+static void swapd_serve(void)
+{
+	struct task *task = container_of(list_head(&swap_waiters), struct task, task_node);
+	struct page_info *page;
+	physaddr_t *entry;
+
+	if (task->task_swap_end) {
+		swapd_swap_out(task);
+		return;
+	}
+
+	// The page is no longer in swap, so the task can just retry
+	if (!(entry = swap_lookup(task, task->task_swap_va))) {
+		swap_wake(task);
+		return;
+	}
+
+	if (!(page = page_alloc(0))) {
+		swapd_oom = true;
+		return;
+	}
+
+	list_del(&task->task_node);
+	swapd_read(page, swap_slot(*entry), task);
+}
+
+static void swapd(void *arg)
+{
+	for (;;) {
+		asm volatile("cli" ::: "memory");
+		big_spin_lock(&kernel_lock);
+		fine_spin_lock(&swap_lock);
+
+		if (swapd_poll() && !list_is_empty(&swap_waiters)) swapd_serve();
+
+		// Sleep when idle
+		if (!swapd_oom && io.op == IO_NONE && list_is_empty(&swap_waiters)) {
+			cur_task->task_status = TASK_NOT_RUNNABLE;
+			cur_task = NULL;
+		}
+
+		fine_spin_unlock(&swap_lock);
+
+		if (swapd_oom) {
+			swapd_oom = false;
+			oom_kill();
+		}
+
+		sched_yield();
+	}
 }
