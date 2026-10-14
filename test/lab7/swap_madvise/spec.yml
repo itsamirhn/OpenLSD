@@ -1,0 +1,12 @@
+name: Swap with MADV_SWAP
+description: Pages swapped out with MADV_SWAP come back on a fault
+
+matchlines:
+  - 'Read from swap through syscall.'
+  - 'The child sees the shared swap.'
+  - 'MADV_SWAP test successful.'
+
+---
+
+name: (2 cores)
+qemu: -smp 2
