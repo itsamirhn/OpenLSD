@@ -30,6 +30,8 @@ static int insert_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 		*entry = PAGE_NONPRESENT(page2pa(page));
 		tlb_invalidate(info->pml4, (void *)base);
 		page_decref(page);
+	} else if (pte_swapped(*entry)) {
+		swap_free(*entry);
 	}
 
 	*entry = page2pa(info->page) | (info->flags & ~(uint64_t)PAGE_HUGE) | PAGE_PRESENT;
@@ -70,6 +72,8 @@ static int insert_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 					table->entries[i] = PAGE_NONPRESENT(page2pa(p));
 					tlb_invalidate(info->pml4, (void *)(base + (i * PAGE_SIZE)));
 					page_decref(p);
+			} else if (pte_swapped(table->entries[i])) {
+					swap_free(table->entries[i]);
 			}
 			*entry = PAGE_NONPRESENT(page2pa(page));
 			tlb_invalidate(info->pml4, (void *)base);

@@ -169,7 +169,7 @@ int ptbl_free(physaddr_t *entry, uintptr_t base, uintptr_t end,
 
 	uint32_t i;
 	for (i = PAGE_TABLE_INDEX(base); i <= PAGE_TABLE_INDEX(end); ++i) {
-		if (ptbl->entries[i] & PAGE_PRESENT) {
+		if (ptbl->entries[i] & PAGE_PRESENT || pte_swapped(ptbl->entries[i])) {
 			return 0;
 		}
 	}

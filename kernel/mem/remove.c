@@ -18,6 +18,12 @@ static int remove_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct remove_info *info = walker->udata;
 	struct page_info *page;
 
+	if (pte_swapped(*entry)) {
+		swap_free(*entry);
+		*entry = 0;
+		return 0;
+	}
+
 	if (!(*entry & PAGE_PRESENT)) return 0;
 
 	page = pa2page(PAGE_ADDR(*entry));

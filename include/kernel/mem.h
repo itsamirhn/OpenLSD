@@ -14,6 +14,7 @@
 #include <kernel/mem/ptbl.h>
 #include <kernel/mem/remove.h>
 #include <kernel/mem/slab.h>
+#include <kernel/mem/swap.h>
 #include <kernel/mem/tlb.h>
 #include <kernel/mem/user.h>
 #include <kernel/mem/walk.h>

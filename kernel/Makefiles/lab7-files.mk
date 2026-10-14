@@ -5,6 +5,7 @@ KERNEL_SRCFILES += \
 	kernel/dev/ata.c \
 	kernel/dev/disk.c \
 	kernel/dev/pci.c \
-	kernel/mem/oom.c
+	kernel/mem/oom.c \
+	kernel/mem/swap.c
 
 
