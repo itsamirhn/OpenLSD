@@ -20,7 +20,7 @@ struct cow_info {
 static int cow_share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker) {
 	struct cow_info *info = walker->udata;
 
-	if (pte_swapped(*entry)) return swap_share(info->child_pml4, base, *entry);
+	if (pte_swapped(*entry)) return swap_share(info->child_pml4, base, *entry, 1);
 	if (!(*entry & PAGE_PRESENT)) return 0;
 
 	if (*entry & PAGE_WRITE) {
@@ -32,6 +32,9 @@ static int cow_share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struc
 }
 
 static int cow_share_pde(physaddr_t *entry, uintptr_t pde_base, uintptr_t pde_end, struct page_walker *walker) {
+	struct cow_info *info = walker->udata;
+
+	if (pte_swapped(*entry)) return swap_share(info->child_pml4, pde_base, *entry, PAGE_TABLE_ENTRIES);
 	if (!(*entry & PAGE_HUGE)) return 0;
 	return cow_share_pte(entry, pde_base, pde_end, walker);
 }

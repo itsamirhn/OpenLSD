@@ -27,7 +27,7 @@ static int footprint_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 static int footprint_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	if ((*entry & PAGE_PRESENT) && (*entry & PAGE_HUGE)) *(size_t *)walker->udata += HPAGE_SIZE / PAGE_SIZE;
+	if (((*entry & PAGE_PRESENT) && (*entry & PAGE_HUGE)) || pte_swapped(*entry)) *(size_t *)walker->udata += HPAGE_SIZE / PAGE_SIZE;
 	return 0;
 }
 
