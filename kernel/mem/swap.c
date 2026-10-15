@@ -130,36 +130,23 @@ bool swap_enabled(void)
 }
 
 // The next slot or 0 when swap is full
-static size_t slot_alloc(void)
+static size_t slot_alloc(size_t n)
 {
+	size_t first, slot = swap_cursor, len = 0;
 
-	for (size_t i = 1; i < nslots; ++i) {
-		if (++swap_cursor >= nslots) swap_cursor = 1;
-		if (!swap_map[swap_cursor] && atomic_cmpxchg(&swap_map[swap_cursor], 0, 1)) return swap_cursor;
-	}
-
-	return 0;
-}
-
-// Find n consecutive slots, needed for huge pages, return 0 when nothing is found
-static size_t slot_find_run(size_t n)
-{
-	size_t slot, len = 0;
-
-	for (slot = 1; slot < nslots; ++slot) {
+	// One lap around
+	for (size_t i = 0; i < nslots + n - 2; ++i) {
+		if (++slot >= nslots) slot = 1, len = 0;
 		len = swap_map[slot] ? 0 : len + 1;
-		if (len == n) return slot - n + 1;
+		if (len < n) continue;
+
+		first = slot - n + 1;
+		for (i = first; i <= slot; ++i) atomic_inc(&swap_map[i]);
+		swap_cursor = slot;
+		return first;
 	}
 
 	return 0;
-}
-
-static size_t slot_alloc_run(size_t n)
-{
-	size_t first = slot_find_run(n);
-
-	for (size_t i = 0; first && i < n; ++i) atomic_inc(&swap_map[first + i]);
-	return first;
 }
 
 // Drops the references of the swap pages
@@ -168,8 +155,8 @@ void swap_free(physaddr_t entry, size_t npages)
 	for (size_t i = 0; i < npages; ++i) {
 		uint16_t old = atomic_dec(&swap_map[swap_slot(entry) + i]);
 
-	assert(old > 0);
-}
+		assert(old > 0);
+	}
 }
 
 static int share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
@@ -341,7 +328,7 @@ static bool clock_room(struct clock *clock) // more place before we move to disk
 
 static size_t clock_slot(struct clock *clock)
 {
-	if (!clock->npages) return clock->slot = slot_alloc();
+	if (!clock->npages) return clock->slot = slot_alloc(1);
 
 	atomic_inc(&swap_map[clock->slot + clock->npages]);
 	return clock->slot + clock->npages;
@@ -388,7 +375,7 @@ static int swap_huge(physaddr_t *entry, uintptr_t base, uintptr_t end, struct cl
 {
 	struct page_info *page = pa2page(PAGE_ADDR(*entry));
 
-	clock->slot = slot_alloc_run(PAGE_TABLE_ENTRIES);
+	if (!(clock->slot = slot_alloc(PAGE_TABLE_ENTRIES))) return 0;
 	memcpy(page2kva(bounce), page2kva(page), HPAGE_SIZE);
 
 
@@ -411,7 +398,6 @@ static int swap_page_pde(physaddr_t *entry, uintptr_t base, uintptr_t end, struc
 	page = pa2page(PAGE_ADDR(*entry));
 	if (page->pp_ref != 1) return 0;
 
-	if (!slot_find_run(PAGE_TABLE_ENTRIES)) return 0;
 	if (!clock->npages) return swap_huge(entry, base, end, clock);
 
 	clock->stop = true;
@@ -512,14 +498,16 @@ static void swapd_swap_out(struct task *task)
 {
 	struct clock clock = { .task = task, .force = true };
 	uintptr_t va = (uintptr_t)task->task_swap_va;
-	int ret = swap_page_walk(&clock, va, (uintptr_t)task->task_swap_end);
+	int ret;
 
-	if (ret == -EAGAIN) {
+	while (clock_room(&clock) && (ret = swap_page_walk(&clock, va, (uintptr_t)task->task_swap_end)) == -EAGAIN) va = clock.next;
+
+	if (clock.npages) {
 		// Take turns with the other tasks that need to be swapped
-		task->task_swap_va = (void *)MAX(clock.next, va);
+		task->task_swap_va = (void *)va;
 		list_del(&task->task_node);
 		list_add_tail(&swap_waiters, &task->task_node);
-		swapd_write(clock.slot);
+		swapd_write(clock.slot, clock.npages);
 		return;
 	}
 
@@ -531,24 +519,31 @@ static void swapd_swap_out(struct task *task)
 static bool swapd_poll(void)
 {
 	physaddr_t *entry;
+	size_t npages;
 	int ret;
 
 	if (io.op == IO_NONE) return true;
 	if ((ret = swap_rw()) == -EAGAIN) return false;
 
-	if (ret < 0) panic("swap: cannot %s slot %u", io.op == IO_WRITE ? "write" : "read", io.slot);
+	if (ret < 0) panic("swap: cannot %s slot %u", io.op == IO_WRITE ? "write" : "read", io.slot + io.done);
+
+	// Issue the next chunk
+	if ((io.done += io_chunk()) < io.npages) {
+		swap_rw();
+		return false;
+	}
 
 	if (io.op == IO_WRITE) {
 		// The page went to swap when it was copied to the bounce page
 	} else if (!io.task) { // Read, but the task went away in the meanwhile
 		page_free(io.page);
-	} else if (!(entry = swap_lookup(io.task, io.task->task_swap_va))) {
+	} else if (!(entry = swap_lookup(io.task, io.task->task_swap_va, &npages)) || npages != io.npages) {
 		page_free(io.page);
 		sched_enqueue(io.task);
 	} else {
-		swap_free(*entry);
+		swap_free(*entry, npages);
 		atomic_inc(&io.page->pp_ref);
-		*entry = page2pa(io.page) | (*entry & (PAGE_UMASK | PAGE_DIRTY)) | PAGE_PRESENT | PAGE_ACCESSED; // "Access" the page
+		*entry = page2pa(io.page) | (*entry & (PAGE_UMASK | PAGE_DIRTY)) | PAGE_PRESENT | PAGE_ACCESSED | (npages == PAGE_TABLE_ENTRIES ? PAGE_HUGE : 0); // "Access" the page
 		sched_enqueue(io.task);
 	}
 
@@ -563,27 +558,31 @@ static void swapd_serve(void)
 	struct task *task = container_of(list_head(&swap_waiters), struct task, task_node);
 	struct page_info *page;
 	physaddr_t *entry;
+	size_t npages;
 
 	if (task->task_swap_end) {
 		swapd_swap_out(task);
 		return;
 	}
 
-	// The page is no longer in swap, so the task can just retry
-	if (!(entry = swap_lookup(task, task->task_swap_va))) {
-		if (++swapd_batch < SWAP_BATCH && swapd_reclaim()) return; // work in batches
+	// The page is no longer in swap, so the task can just retry and get some memory
+	if (!(entry = swap_lookup(task, task->task_swap_va, &npages))) {
+		if (swapd_batch < SWAP_BATCH && (npages = swapd_reclaim())) { // work in batches
+			swapd_batch += npages;
+			return;
+		}
 		swapd_batch = 0;
 		swap_wake(task);
 		return;
 	}
-
-	if (!(page = page_alloc(0))) {
+	// get page to swap back in, otherwise reclaim
+	if (!(page = page_alloc(npages == PAGE_TABLE_ENTRIES ? ALLOC_HUGE : 0))) {
 		swapd_reclaim();
 		return;
 	}
 
 	list_del(&task->task_node);
-	swapd_read(page, swap_slot(*entry), task);
+	swapd_read(page, swap_slot(*entry), npages, task);
 }
 
 static void swapd(void *arg)
