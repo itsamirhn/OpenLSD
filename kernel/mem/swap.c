@@ -326,10 +326,26 @@ static void swap_wake(struct task *task)
 struct clock {
 	struct task *task;
 	bool force; // Evict without a second chance, for MADV_SWAP
-	size_t slot;
+	size_t slot, npages;
+	bool stop; // write all to disk due to upcoming huge page
 	// Next in this eviction walk
 	uintptr_t next;
 };
+
+static bool clock_room(struct clock *clock) // more place before we move to disk
+{
+	size_t slot = clock->slot + clock->npages;
+
+	return !clock->stop && (!clock->npages || (clock->npages < SWAP_CLUSTER && slot < nslots && !swap_map[slot]));
+}
+
+static size_t clock_slot(struct clock *clock)
+{
+	if (!clock->npages) return clock->slot = slot_alloc();
+
+	atomic_inc(&swap_map[clock->slot + clock->npages]);
+	return clock->slot + clock->npages;
+}
 
 static bool clock_referenced(physaddr_t *entry, uintptr_t base, struct clock *clock)
 {
@@ -342,23 +358,25 @@ static bool clock_referenced(physaddr_t *entry, uintptr_t base, struct clock *cl
 static bool clock_pinned(uintptr_t base, uintptr_t end, struct clock *clock)
 {
 	struct task *task = clock->task;
+	uintptr_t rstatus = (uintptr_t)task->task_rstatus;
 
-	return task->task_status == TASK_NOT_RUNNABLE && task->task_rstatus && ROUNDDOWN((uintptr_t)task->task_rstatus, PAGE_SIZE) == base;
+	return task->task_status == TASK_NOT_RUNNABLE && rstatus && base <= rstatus && rstatus <= end;
 }
 
 static int swap_page_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker)
 {
 	struct clock *clock = walker->udata;
 	struct page_info *page;
+	size_t slot;
 
-	if (!(*entry & PAGE_PRESENT) || (!clock->force && clock_referenced(entry, base, clock)) || clock_pinned(base, clock)) return 0;
+	if (!(*entry & PAGE_PRESENT) || (!clock->force && clock_referenced(entry, base, clock)) || clock_pinned(base, end, clock)) return 0;
 	page = pa2page(PAGE_ADDR(*entry));
 	if (page->pp_ref > 1) return 0; // do not swap CoW pages for now. With reverse mappings could be done.
-	if (!(clock->slot = slot_alloc())) return -ENOMEM;
+	if (!(slot = clock_slot(clock))) return -ENOMEM;
 
-	memcpy(page2kva(bounce), page2kva(page), PAGE_SIZE);
+	memcpy(page2kva(bounce + clock->npages++), page2kva(page), PAGE_SIZE);
 
-	*entry = swap_pte(clock->slot, *entry);
+	*entry = swap_pte(slot, *entry);
 	tlb_invalidate(clock->task->task_pml4, (void *)base);
 	page_decref(page);
 
@@ -438,28 +456,22 @@ static bool clock_lock(struct task *task, bool *busy)
 }
 
 // Pick a page using CLOCK, returns the slot to write it to or 0 if none is left
-static size_t clock_evict(bool *busy)
+static void clock_evict(struct clock *clock, bool *busy)
 {
-	struct clock clock = { 0 };
 	size_t visits;
+	int ret = 0;
 
-	for (visits = 0; visits <= 2 * (size_t)pid_max; ++visits) {
-		clock.task = tasks[hand.pid];
-		if (clock_lock(clock.task, busy)) {
-			int ret = swap_page_walk(&clock, hand.va, USER_LIM);
-
-			fine_spin_unlock(&clock.task->task_lock);
-			if (ret < 0) {
-				hand.va = clock.next;
-				break;
-			}
+	for (visits = 0; visits <= 2 * (size_t)pid_max && ret != -ENOMEM && clock_room(clock); ++visits) {
+		clock->task = tasks[hand.pid];
+		if (clock_lock(clock->task, busy)) {
+			while (clock_room(clock) && (ret = swap_page_walk(clock, hand.va, USER_LIM)) == -EAGAIN)hand.va = clock->next;
+			fine_spin_unlock(&clock->task->task_lock);
+			if (ret == -EAGAIN || ret == -ENOMEM) break;
 		}
 
 		hand.pid = hand.pid % (pid_max - 1) + 1;
 		hand.va = 0;
 	}
-
-	return clock.slot;
 }
 
 static void swapd_write(size_t slot, size_t npages)
@@ -483,15 +495,16 @@ static void swapd_read(struct page_info *page, size_t slot, size_t npages, struc
 	swap_rw();
 }
 
-static bool swapd_reclaim(void)
+static size_t swapd_reclaim(void)
 {
+	struct clock clock = { 0 };
 	bool busy = false;
-	size_t slot = clock_evict(&busy);
 
-	if (slot) swapd_write(slot);
+	clock_evict(&clock, &busy);
+	if (clock.npages) swapd_write(clock.slot, clock.npages);
 	else if (!busy) swapd_oom = true;
 
-	return slot != 0;
+	return clock.npages;
 }
 
 // Swap out the next page of the MADV_SWAP range
