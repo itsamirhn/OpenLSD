@@ -90,6 +90,18 @@ int sys_mquery(struct vma_info *info, void *addr)
 	return 0;
 }
 
+// If we need only a part of the huge page, then split it in swap and change the flags on the split pages
+static void swap_in_partial(void *va, size_t len)
+{
+	void *huge;
+
+	if (!swap_enabled()) return;
+	// Retry once swapd made room for the page table
+	while ((huge = swap_huge_partial(cur_task, va, len))) if (swap_split(cur_task, huge) < 0) swap_wait(NULL, true);
+
+	if ((huge = swap_huge_partial(cur_task, va, len))) swap_wait(huge, true);
+}
+
 void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
 	uintptr_t offset)
 {
@@ -131,6 +143,7 @@ void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,
 		vma_flags |= VM_EXEC;
 	}
 	if (flags & MAP_FIXED) {
+		swap_in_partial(addr, len);
 		unmap_and_remove_vma_range(cur_task, addr, len);
 		vma = add_anonymous_vma(cur_task, "user", addr,len, vma_flags);
 	} else {
@@ -164,6 +177,7 @@ void sys_munmap(void *addr, size_t len)
 	if (start >= USER_LIM || end > USER_LIM) {
 		return;
 	}
+	swap_in_partial((void *)start, end - start);
 	// Splitting a VMA can run out of memory, so retry once swapd made room
 	if (unmap_and_remove_vma_range(cur_task, (void *)start, end-start) == -ENOMEM && swap_enabled()) swap_wait(NULL, true);
 }
@@ -184,6 +198,7 @@ int sys_mprotect(void *addr, size_t len, int prot)
 	if (end <= start || end > USER_LIM) { // Check for overflow
 		return -EINVAL;
 	}
+	swap_in_partial((void *)start, end - start);
 	int ret = protect_vma_range(cur_task, (void *)start, end - start, prot);
 
 	if (ret == -ENOMEM && swap_enabled()) swap_wait(NULL, true);

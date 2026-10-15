@@ -19,7 +19,7 @@ static int remove_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *page;
 
 	if (pte_swapped(*entry)) {
-		swap_free(*entry);
+		swap_free(*entry, 1);
 		*entry = 0;
 		return 0;
 	}
@@ -46,6 +46,13 @@ static int remove_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 {
 	struct remove_info *info = walker->udata;
 	struct page_info *page;
+
+	// Just free a whole swapped out page
+	if (pte_swapped(*entry) && info->base <= base && end <= info->end) {
+		swap_free(*entry, PAGE_TABLE_ENTRIES);
+		*entry = 0;
+		return 0;
+	}
 
 	if (!(*entry & PAGE_PRESENT)) return 0;
 	if (!(*entry & PAGE_HUGE)) return 0;
