@@ -462,19 +462,23 @@ static size_t clock_evict(bool *busy)
 	return clock.slot;
 }
 
-static void swapd_write(size_t slot)
+static void swapd_write(size_t slot, size_t npages)
 {
 	io.op = IO_WRITE;
 	io.page = bounce;
 	io.slot = slot;
+	io.npages = npages;
+	io.done = 0;
 	swap_rw();
 }
 
-static void swapd_read(struct page_info *page, size_t slot, struct task *task)
+static void swapd_read(struct page_info *page, size_t slot, size_t npages, struct task *task)
 {
 	io.op = IO_READ;
 	io.page = page;
 	io.slot = slot;
+	io.npages = npages;
+	io.done = 0;
 	io.task = task;
 	swap_rw();
 }
