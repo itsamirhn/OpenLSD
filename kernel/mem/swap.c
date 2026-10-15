@@ -15,6 +15,8 @@
 #define SWAP_MAGIC "SWAP"
 #define SWAP_MAX_SLOTS (128 * 1024 * 1024 / PAGE_SIZE)
 #define SWAP_BATCH 64
+// MAX Pages one AHCI can process
+#define SWAP_CLUSTER 16
 
 #define SYSCALL_INSN_SIZE 2
 
@@ -49,13 +51,13 @@ static struct {
 static struct list swap_waiters = LIST_INIT(swap_waiters);
 static struct task *swapd_task;
 
-static struct page_info *bounce; // copy page
+static struct page_info *bounce; // copy page, huge page
 
 // The disk state, a read pages in task_swap_va of the task
 static struct {
 	enum { IO_NONE, IO_READ, IO_WRITE } op;
 	struct page_info *page;
-	size_t slot;
+	size_t slot, npages, done;
 	struct task *task;
 } io;
 
@@ -65,17 +67,23 @@ static bool swapd_oom;
 // Pages evicted so far for the task at the head that needs memory
 static size_t swapd_batch;
 
+static size_t io_chunk(void)
+{
+	return MIN(io.npages - io.done, SWAP_CLUSTER);
+}
+
 // Issue command and poll disk
 static int swap_rw(void)
 {
-	void *buf = page2kva(io.page);
-	uint64_t sector = io.slot * sectors_per_page;
+	void *buf = page2kva(io.page + io.done);
+	uint64_t sector = (io.slot + io.done) * sectors_per_page;
+	size_t count = io_chunk() * sectors_per_page;
 	int64_t ret;
 
-	ret = io.op == IO_WRITE ? disk_write(swap_disk, buf, sectors_per_page, sector) : disk_read(swap_disk, buf, sectors_per_page, sector);
+	ret = io.op == IO_WRITE ? disk_write(swap_disk, buf, count, sector) : disk_read(swap_disk, buf, count, sector);
 
 	if (ret == -EAGAIN) return ret;
-	return ret == PAGE_SIZE ? 0 : -EFAULT;
+	return ret == io_chunk() * PAGE_SIZE ? 0 : -EFAULT;
 }
 
 static void swapd(void *arg);
@@ -93,6 +101,8 @@ void swap_init(void)
 	io.op = IO_READ;
 	io.page = bounce;
 	io.slot = 0;
+	io.npages = 1;
+	io.done = 0;
 
 	for (i = 0; i < ndisks && !swap_disk; ++i) {
 		if (disk_stat(disks[i], &stat) < 0) continue;
