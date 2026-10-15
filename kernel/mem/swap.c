@@ -87,7 +87,7 @@ void swap_init(void)
 	size_t i;
 	int ret;
 
-	if (!(bounce = page_alloc(0))) return;
+	if (!(bounce = page_alloc(ALLOC_HUGE))) return;
 	atomic_inc(&bounce->pp_ref);
 
 	io.op = IO_READ;

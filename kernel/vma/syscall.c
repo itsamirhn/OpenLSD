@@ -98,8 +98,6 @@ static void swap_in_partial(void *va, size_t len)
 	if (!swap_enabled()) return;
 	// Retry once swapd made room for the page table
 	while ((huge = swap_huge_partial(cur_task, va, len))) if (swap_split(cur_task, huge) < 0) swap_wait(NULL, true);
-
-	if ((huge = swap_huge_partial(cur_task, va, len))) swap_wait(huge, true);
 }
 
 void *sys_mmap(void *addr, size_t len, int prot, int flags, int fd,

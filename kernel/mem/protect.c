@@ -47,7 +47,8 @@ static int protect_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct protect_info *info = walker->udata;
 
 	// Change flags on the whole swap entry
-	if (pte_swapped(*entry && info->base <= base && end <= info->end) {
+	if (pte_swapped(*entry)) {
+		assert(info->base <= base && end <= info->end);
 		*entry = swap_pte(swap_slot(*entry), info->flags | (*entry & PAGE_DIRTY));
 		return 0;
 	}

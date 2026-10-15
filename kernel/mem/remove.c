@@ -48,7 +48,8 @@ static int remove_pde(physaddr_t *entry, uintptr_t base, uintptr_t end,
 	struct page_info *page;
 
 	// Just free a whole swapped out page
-	if (pte_swapped(*entry) && info->base <= base && end <= info->end) {
+	if (pte_swapped(*entry)) {
+		assert(info->base <= base && end <= info->end);
 		swap_free(*entry, PAGE_TABLE_ENTRIES);
 		*entry = 0;
 		return 0;
