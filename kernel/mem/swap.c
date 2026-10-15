@@ -141,11 +141,35 @@ static size_t slot_alloc(void)
 	return 0;
 }
 
-void swap_free(physaddr_t entry)
+// Find n consecutive slots, needed for huge pages, return 0 when nothing is found
+static size_t slot_find_run(size_t n)
 {
-	uint16_t old = atomic_dec(&swap_map[swap_slot(entry)]);
+	size_t slot, len = 0;
+
+	for (slot = 1; slot < nslots; ++slot) {
+		len = swap_map[slot] ? 0 : len + 1;
+		if (len == n) return slot - n + 1;
+	}
+
+	return 0;
+}
+
+static size_t slot_alloc_run(size_t n)
+{
+	size_t first = slot_find_run(n);
+
+	for (size_t i = 0; first && i < n; ++i) atomic_inc(&swap_map[first + i]);
+	return first;
+}
+
+// Drops the references of the swap pages
+void swap_free(physaddr_t entry, size_t npages)
+{
+	for (size_t i = 0; i < npages; ++i) {
+		uint16_t old = atomic_dec(&swap_map[swap_slot(entry) + i]);
 
 	assert(old > 0);
+}
 }
 
 static int share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
@@ -156,40 +180,90 @@ static int share_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
 }
 
 // Maps the swap entry at va too, like for a forked child
-int swap_share(struct page_table *pml4, uintptr_t va, physaddr_t entry)
+int swap_share(struct page_table *pml4, uintptr_t va, physaddr_t entry, size_t npages)
 {
 	struct page_walker walker = {
-		.pte_callback = share_pte,
-		.pde_callback = ptbl_alloc,
 		.pdpte_callback = ptbl_alloc,
 		.pml4e_callback = ptbl_alloc,
 		.udata = &entry,
 	};
-	int ret = walk_page_range(pml4, (void *)va, (void *)(va + PAGE_SIZE), &walker);
+	// A huge page has its swap entry in the PDE
+	if (npages == 1) {
+		walker.pte_callback = share_pte;
+		walker.pde_callback = ptbl_alloc;
+	} else {
+		walker.pde_callback = share_pte;
+	}
 
-	if (ret == 0) atomic_inc(&swap_map[swap_slot(entry)]);
+	int ret = walk_page_range(pml4, (void *)va, (void *)(va + npages * PAGE_SIZE), &walker);
+	for (size_t i = 0; ret == 0 && i < npages; ++i) atomic_inc(&swap_map[swap_slot(entry) + i]);
 	return ret;
 }
+
+struct swap_found {
+	physaddr_t *entry;
+	size_t npages;
+};
 
 static int find_swap_pte(physaddr_t *entry, uintptr_t base, uintptr_t end,
     struct page_walker *walker)
 {
-	if (pte_swapped(*entry)) *(physaddr_t **)walker->udata = entry;
+	struct swap_found *found = walker->udata;
+
+	if (pte_swapped(*entry)) {
+		found->entry = entry;
+		found->npages = (end - base + 1) / PAGE_SIZE;
+	}
 	return 0;
 }
 
 // The swap entry of the page at va, or NULL if the page is not in swap
-physaddr_t *swap_lookup(struct task *task, void *va)
+physaddr_t *swap_lookup(struct task *task, void *va, size_t *npages)
 {
 	void *base = (void *)ROUNDDOWN((uintptr_t)va, PAGE_SIZE);
-	physaddr_t *entry = NULL;
+	struct swap_found found = { 0 };
 	struct page_walker walker = {
 		.pte_callback = find_swap_pte,
-		.udata = &entry,
+		.pde_callback = find_swap_pte,
+		.udata = &found,
 	};
 
 	walk_page_range(task->task_pml4, base, base + PAGE_SIZE, &walker);
-	return entry;
+	if (npages) *npages = found.npages;
+	return found.entry;
+}
+
+// Find huge page around va and va+len to later get split if needed
+void *swap_huge_partial(struct task *task, void *va, size_t len)
+{
+	uintptr_t base = (uintptr_t)va, end = base + len - 1;
+	uintptr_t ends[] = { base, end };
+	size_t i, npages;
+
+	for (i = 0; i < 2; ++i) {
+		uintptr_t huge = ROUNDDOWN(ends[i], HPAGE_SIZE);
+		if (swap_lookup(task, (void *)ends[i], &npages) && npages == PAGE_TABLE_ENTRIES && (huge < base || huge + HPAGE_SIZE - 1 > end)) return (void *)huge;
+	}
+
+	return NULL;
+}
+
+// Splits the swapped out huge page at va into a page table of 512 swap entries, without swapping it in
+int swap_split(struct task *task, void *va)
+{
+	physaddr_t *entry = swap_lookup(task, va, NULL);
+	struct page_info *page = page_alloc(0);
+	struct page_table *ptbl;
+	size_t i;
+
+	if (!page) return -ENOMEM;
+	atomic_inc(&page->pp_ref);
+
+	ptbl = page2kva(page);
+	for (i = 0; i < PAGE_TABLE_ENTRIES; ++i) ptbl->entries[i] = swap_pte(swap_slot(*entry) + i, *entry);
+
+	*entry = page2pa(page) | PAGE_PRESENT | PAGE_WRITE | PAGE_USER;
+	return 0;
 }
 
 static void swapd_wake(void)
@@ -265,7 +339,7 @@ static bool clock_referenced(physaddr_t *entry, uintptr_t base, struct clock *cl
 }
 
 // Keep the page where rstatus is returned in
-static bool clock_pinned(uintptr_t base, struct clock *clock)
+static bool clock_pinned(uintptr_t base, uintptr_t end, struct clock *clock)
 {
 	struct task *task = clock->task;
 
@@ -292,11 +366,47 @@ static int swap_page_pte(physaddr_t *entry, uintptr_t base, uintptr_t end, struc
 	return -EAGAIN;
 }
 
+static int swap_huge(physaddr_t *entry, uintptr_t base, uintptr_t end, struct clock *clock)
+{
+	struct page_info *page = pa2page(PAGE_ADDR(*entry));
+
+	clock->slot = slot_alloc_run(PAGE_TABLE_ENTRIES);
+	memcpy(page2kva(bounce), page2kva(page), HPAGE_SIZE);
+
+
+	*entry = swap_pte(clock->slot, *entry);
+	tlb_invalidate(clock->task->task_pml4, (void *)base);
+	page_decref(page);
+
+	clock->npages = PAGE_TABLE_ENTRIES;
+	clock->next = end + 1;
+	return -EAGAIN;
+}
+
+// Swap out a huge page
+static int swap_page_pde(physaddr_t *entry, uintptr_t base, uintptr_t end, struct page_walker *walker)
+{
+	struct clock *clock = walker->udata;
+	struct page_info *page;
+
+	if (!(*entry & PAGE_PRESENT) || !(*entry & PAGE_HUGE) || (!clock->force && clock_referenced(entry, base, clock)) || clock_pinned(base, end, clock)) return 0;
+	page = pa2page(PAGE_ADDR(*entry));
+	if (page->pp_ref != 1) return 0;
+
+	if (!slot_find_run(PAGE_TABLE_ENTRIES)) return 0;
+	if (!clock->npages) return swap_huge(entry, base, end, clock);
+
+	clock->stop = true;
+	clock->next = base;
+	return -EAGAIN;
+}
+
 // Evict the first page in [base, end) to the bounce page, -EAGAIN once evicted, -ENOMEM when swap is full
 static int swap_page_walk(struct clock *clock, uintptr_t base, uintptr_t end)
 {
 	struct page_walker walker = {
 		.pte_callback = swap_page_pte,
+		.pde_callback = swap_page_pde,
 		.udata = clock,
 	};
 	int ret = walk_page_range(clock->task->task_pml4, (void *)base, (void *)end, &walker);
