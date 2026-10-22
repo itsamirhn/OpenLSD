@@ -1,4 +1,46 @@
-# LAB 6 
+# LAB 7
+
+## Swap
+
+### Swap disk and slots
+swap_init() uses the first disk that has this magic "SWAP" in its first page. So slot 0 is never used for data, which lets slot_alloc() return 0 when swap is full.
+
+Every 4 KiB page of the disk is a slot, and `swap_map` keeps reference counts per slot, because after a fork parent and child can point to the same swap slot. Slots are handed out with a next fit cursor that looks for n free slots in a row: 1 for a normal page, 512 for a huge page, so a huge page can be written and read back in at once
+
+### Swap entries in the page tables
+When a page is swapped out we clear the present bit, set bit 9 (what we call PAGE_SWAP bit) and store the slot number where the physical address normally is. The permission and dirty bits stay, so mprotect() still works on pages that are on disk. For BONUS_L1TF_MDS the slot bits are inverted like our other non-present entries. A huge page is swapped out as a whole and its swap entry lives in the PDE table.
+
+The page table code knows about these entries: unmapping drops the slot references, fork copies the entry to the child and increments the counters `swap_share()`, mprotect rewrites the flags, `ptbl_free()` keeps tables that still have swap entries, and the OOM killer counts swapped pages in the footprint of a task. If `munmap`, `mprotect` or `mmap(MAP_FIXED)` only cover part of a swapped huge page, `swap_split()` turns the PDE into a page table of 512 normal swap entries, which needs no disk I/O since the slots are contiguous.
+
+### swapd
+All swap work is done by one kernel task, `swapd`, pinned to the boot CPU in this implementation. A task that needs it stores the address in `task_swap_va`, switches to the kernel page table, thus the TLB gets flushed while `swapd` changes its page tables; adds itself to swap_waiters as TASK_SWAPPING and yields. This happens when it faults on a swapped page, `task_page_fault_handler()` returns -EAGAIN, when an allocation in the fault handler, (fork, munmap, mprotect or madvise)fails with -ENOMEM. After `swapd` is done the task just retries. If the fault was inside a syscall, we move the instruction pointer back by 2 bytes so the whole syscall runs again.
+
+`swapd` checks if the current disk command is done and then serves the first task in the queue. Disk reads and writes return -EAGAIN while the disk is busy, so  `swapd` yields between polls and other tasks can run during the I/O. Requests are split into chunks of 16 pages, the most the AHCI driver does in one command. For a swap in,  `swapd` allocates a page (huge if needed), starts the read, and when it finishes drops the slot reference, maps the page with the accessed bit set and wakes the task. If the task was killed meanwhile, `swap_cancel()` makes sure the page is just freed. If there is no free page,  `swapd` reclaims first.
+
+### Page replacement (CLOCK)
+Reclaiming uses CLOCK. A pair (pid, virtual address), sweeps over the address spaces of all user tasks. If a present page has its accessed bit set, we clear it and move on, thus we give it a second chance, otherwise it is evicted; get a slot, copy the page into a bounce buffer, replace the PTE with the swap entry, and free the page right away. The bounce buffer is one 2 MiB page allocated at boot, so we can support swapping a whole huge page. Since the data is already copied, the memory is free before the write even starts.
+
+For an out of memory task `swapd` evicts in batches of up to 64 pages before waking it. If a full round over all tasks finds nothing to evict, swapd calls the OOM killer, which kills the user task with the biggest RSS + swap footprint.
+
+The clock skips pages of tasks that are running right now (we only scan tasks that are blocked and whose task_lock we get with a trylock, otherwise we would need TLB shootdowns, for the current running task), pages with more than one reference (CoW pages and the zero page), and the page with the waitpid() status pointer of a sleeping parent. MADV_SWAP in `madvice()` uses the same code but only walks the given range and ignores the accessed bit. After each write the task goes to the back of the queue.
+
+
+## OOM killer
+When memory runs out, `oom_kill()` kills the user task with the biggest footprint. The footprint is counted by walking the page tables of the task, and it is the RSS plus the pages it has in swap, measured in 4k pages. Swap usage is also memory usage, thus this avoids that a smaller task gets killed. Kernel threads, tasks that are already killed and dying tasks are skipped.
+
+Without swap the page fault handler calls the OOM killer every time it gets -ENOMEM and then retries the fault, until it works or there is nothing left to kill. With swap only `swapd` calls it, when the clock went around all tasks and could not evict a single page. The victim is marked as killed, and if it is running on another CPU we wait until it is off the CPU before destroying it. The `oom_lock` is taken with a trylock, so when two CPUs run out of memory at the same time only one picks a victim and the other just retries, thus we do not kill too many tasks at once.
+
+## Limitations and problems
+**Shared pages and running tasks are never swapped.** For CoW pages we would need reverse mappings to update every PTE, when a page gets swapped out. Skipping running tasks means that on several CPUs swapd may OOM kill even though memory could be reclaimed. Evicting from them would need TLB shootdowns.
+
+**Performance.** One swapd, one disk command at a time and an extra memcpy through the bounce buffer. Swap in is one page per fault, and MADV_WILLNEED is just a loop of faults. Reclaim only starts after an allocation failed.
+
+**OOM killer.** There is also no way for a user to protect a task from being picked (like oom_score_adj in Linux). Also there is no importance score, so important tasks for the OS can be killed and take the whole userspace down.
+
+**Other.** Restarting a syscall assumes it did nothing visible yet, so one that prints half its output and then faults would print that part twice. A huge page needs 512 consecutive free slots and is skipped when the swap disk is highly fragmented, where it could be split instead.
+
+------------------------------------------------
+# LAB 6
 
 ## Kernel Tasks
 The most of kernel task lives in mem/zero.c. Where we generate a per cpu kernel task, which uses the per cpu zero_pending list, in ordre to reduce locking while in the kernel task.
